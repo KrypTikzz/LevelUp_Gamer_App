@@ -18,6 +18,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.levelup_gamerapp.local.AppDatabase
 import com.example.levelup_gamerapp.local.CarritoEntity
+import com.example.levelup_gamerapp.remote.ApiClient
+import com.example.levelup_gamerapp.remote.CrearPedidoRequest
+import com.example.levelup_gamerapp.remote.ItemPedidoRequest
 import com.example.levelup_gamerapp.repository.CarritoRepository
 import com.example.levelup_gamerapp.viewmodel.CarritoViewModel
 import com.example.levelup_gamerapp.viewmodel.CarritoViewModelFactory
@@ -34,19 +37,18 @@ fun PantallaCarrito() {
     val repo = CarritoRepository(carritoDao)
     val carritoVM: CarritoViewModel = viewModel(factory = CarritoViewModelFactory(repo))
 
-    // 🔹 DAO de productos para poder descontar stock
+    // DAO de productos para poder validar y descontar stock local
     val productosDao = db.productosDao()
 
     val carrito by carritoVM.carrito.collectAsState(initial = emptyList())
 
-    // 🔹 AGRUPAR POR idProducto (no por Triple(nombre, precio, imagen))
+    // Agrupar por idProducto (no por nombre/precio/imagen)
     val carritoAgrupado = remember(carrito) {
         carrito
-            .groupBy { it.idProducto } // 👈 clave: id del producto real
+            .groupBy { it.idProducto } // clave: id real del producto
             .map { (_, items) ->
                 val primero = items.first()
                 val cantidadTotal = items.sumOf { it.cantidad }
-                // devolvemos una copia con la cantidad total
                 primero.copy(cantidad = cantidadTotal)
             }
     }
@@ -54,10 +56,8 @@ fun PantallaCarrito() {
     // Total coherente con lo que se muestra
     val total = carritoAgrupado.sumOf { it.precio * it.cantidad }
 
-    // 🔹 Para lanzar corrutinas desde la UI
+    // Corrutinas y snackbars
     val scope = rememberCoroutineScope()
-
-    // 🔹 Para mostrar mensajes
     val snackbarHostState = remember { SnackbarHostState() }
 
     Scaffold(
@@ -142,14 +142,13 @@ fun PantallaCarrito() {
 
                         Button(
                             onClick = {
-                                // 🔹 Lógica de compra con validación de stock
                                 scope.launch {
                                     if (carritoAgrupado.isEmpty()) {
                                         snackbarHostState.showSnackbar("No hay productos en el carrito")
                                         return@launch
                                     }
 
-                                    // 1) Verificar stock usando idProducto
+                                    // 1) Verificar stock local usando idProducto
                                     var errorMensaje: String? = null
                                     for (item in carritoAgrupado) {
                                         val producto =
@@ -171,23 +170,52 @@ fun PantallaCarrito() {
                                         return@launch
                                     }
 
-                                    // 2) Descontar stock usando idProducto
-                                    for (item in carritoAgrupado) {
-                                        val producto =
-                                            productosDao.obtenerProductoPorId(item.idProducto.toInt())
-                                        if (producto != null) {
-                                            val actualizado = producto.copy(
-                                                cantidadDisponible = producto.cantidadDisponible - item.cantidad
-                                            )
-                                            productosDao.actualizarProducto(actualizado)
-                                        }
+                                    // 2) Armar DTO para el backend (items del pedido)
+                                    val itemsDto = carritoAgrupado.map { item ->
+                                        ItemPedidoRequest(
+                                            productoId = item.idProducto,
+                                            cantidad = item.cantidad
+                                        )
                                     }
 
-                                    // 3) Vaciar carrito
-                                    carritoVM.vaciarCarrito()
+                                    // 👇 Por ahora, usuario fijo: usa el id que viste en pgAdmin
+                                    val usuarioId = 1L // <-- CAMBIA este 1L por el id real de tu usuario
 
-                                    // 4) Avisar al usuario
-                                    snackbarHostState.showSnackbar("Compra realizada con éxito ✅")
+                                    val request = CrearPedidoRequest(
+                                        usuarioId = usuarioId,
+                                        items = itemsDto
+                                    )
+
+                                    try {
+                                        // 3) Llamar al backend (POST /api/pedidos)
+                                        val response = ApiClient.api.crearPedido(request)
+
+                                        if (response.isSuccessful) {
+                                            // 4) Descontar stock local para reflejar el cambio
+                                            for (item in carritoAgrupado) {
+                                                val producto =
+                                                    productosDao.obtenerProductoPorId(item.idProducto.toInt())
+                                                if (producto != null) {
+                                                    val actualizado = producto.copy(
+                                                        cantidadDisponible = producto.cantidadDisponible - item.cantidad
+                                                    )
+                                                    productosDao.actualizarProducto(actualizado)
+                                                }
+                                            }
+
+                                            // 5) Vaciar carrito local
+                                            carritoVM.vaciarCarrito()
+
+                                            // 6) Avisar al usuario
+                                            snackbarHostState.showSnackbar("Compra registrada en el servidor ✅")
+                                        } else {
+                                            snackbarHostState.showSnackbar(
+                                                "Error al registrar compra (código ${response.code()})"
+                                            )
+                                        }
+                                    } catch (e: Exception) {
+                                        snackbarHostState.showSnackbar("No se pudo contactar al servidor 😕")
+                                    }
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF39FF14))
