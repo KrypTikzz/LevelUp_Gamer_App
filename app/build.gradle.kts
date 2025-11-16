@@ -41,12 +41,10 @@ android {
         compose = true
     }
 
-    // ✅ Añadido desde el de tu amigo (recomendado)
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.14"
     }
 
-    // ✅ Evita errores de licencias en recursos
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -73,7 +71,6 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.3")
     implementation("androidx.compose.material:material-icons-extended:1.7.4")
 
-
     // ✅ Corrutinas
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
@@ -85,8 +82,13 @@ dependencies {
     // ✅ Carga de imágenes
     implementation("io.coil-kt:coil-compose:2.7.0")
 
-    // ✅ DataStore (añadido del otro gradle)
+    // ✅ DataStore
     implementation("androidx.datastore:datastore-preferences:1.1.7")
+
+    // 🔹 Networking (Retrofit + Gson + logging)
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
     // ✅ Testing
     testImplementation(libs.junit)
