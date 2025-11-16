@@ -21,15 +21,21 @@ import com.example.levelup_gamerapp.local.CarritoEntity
 import com.example.levelup_gamerapp.repository.CarritoRepository
 import com.example.levelup_gamerapp.viewmodel.CarritoViewModel
 import com.example.levelup_gamerapp.viewmodel.CarritoViewModelFactory
-import androidx.compose.runtime.remember
+import kotlinx.coroutines.launch   // 🔹 NUEVO
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaCarrito() {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val dao = AppDatabase.obtenerBaseDatos(context).carritoDao()
-    val repo = CarritoRepository(dao)
+
+    // DAOs y repositorio del carrito
+    val db = AppDatabase.obtenerBaseDatos(context)
+    val carritoDao = db.carritoDao()
+    val repo = CarritoRepository(carritoDao)
     val carritoVM: CarritoViewModel = viewModel(factory = CarritoViewModelFactory(repo))
+
+    // 🔹 DAO de productos para poder descontar stock
+    val productosDao = db.productosDao()
 
     val carrito by carritoVM.carrito.collectAsState(initial = emptyList())
 
@@ -38,15 +44,18 @@ fun PantallaCarrito() {
         carrito.groupBy { Triple(it.nombreProducto, it.precio, it.imagenUrl) }
             .map { (clave, items) ->
                 val (nombre, precio, imagenUrl) = clave
-                // Sumamos las cantidades de los elementos agrupados
                 val cantidadTotal = items.sumOf { it.cantidad }
-                // Usamos la entidad base para mostrar en pantalla, con cantidad total
-                // y el id del primer elemento para referenciar al eliminar
                 items.first().copy(cantidad = cantidadTotal)
             }
     }
 
     val total = carrito.sumOf { it.precio * it.cantidad }
+
+    // 🔹 Para lanzar corrutinas desde la UI
+    val scope = rememberCoroutineScope()
+
+    // 🔹 Para mostrar mensajes
+    val snackbarHostState = remember { SnackbarHostState() }
 
     Scaffold(
         topBar = {
@@ -61,7 +70,18 @@ fun PantallaCarrito() {
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
             )
         },
-        containerColor = Color.Black
+        containerColor = Color.Black,
+        snackbarHost = {
+            // 🔹 Host personalizado para que el snackbar sea oscuro con texto legible
+            SnackbarHost(hostState = snackbarHostState) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = Color(0xFF111111),
+                    contentColor = Color.White,
+                    actionColor = Color(0xFF39FF14)
+                )
+            }
+        }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -120,7 +140,53 @@ fun PantallaCarrito() {
 
                         Button(
                             onClick = {
-                                // Aquí podrías implementar el proceso de compra
+                                // 🔹 Lógica de compra con validación de stock
+                                scope.launch {
+                                    if (carritoAgrupado.isEmpty()) {
+                                        snackbarHostState.showSnackbar("No hay productos en el carrito")
+                                        return@launch
+                                    }
+
+                                    // 1) Verificar stock
+                                    var errorMensaje: String? = null
+                                    for (item in carritoAgrupado) {
+                                        val producto =
+                                            productosDao.obtenerProductoPorNombre(item.nombreProducto)
+                                        if (producto == null) {
+                                            errorMensaje =
+                                                "Producto '${item.nombreProducto}' no encontrado en catálogo."
+                                            break
+                                        }
+                                        if (producto.cantidadDisponible < item.cantidad) {
+                                            errorMensaje =
+                                                "No hay stock suficiente de '${item.nombreProducto}'. Disponible: ${producto.cantidadDisponible}, solicitado: ${item.cantidad}"
+                                            break
+                                        }
+                                    }
+
+                                    if (errorMensaje != null) {
+                                        snackbarHostState.showSnackbar(errorMensaje!!)
+                                        return@launch
+                                    }
+
+                                    // 2) Descontar stock
+                                    for (item in carritoAgrupado) {
+                                        val producto =
+                                            productosDao.obtenerProductoPorNombre(item.nombreProducto)
+                                        if (producto != null) {
+                                            val actualizado = producto.copy(
+                                                cantidadDisponible = producto.cantidadDisponible - item.cantidad
+                                            )
+                                            productosDao.actualizarProducto(actualizado)
+                                        }
+                                    }
+
+                                    // 3) Vaciar carrito
+                                    carritoVM.vaciarCarrito()
+
+                                    // 4) Avisar al usuario
+                                    snackbarHostState.showSnackbar("Compra realizada con éxito ✅")
+                                }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF39FF14))
                         ) {
