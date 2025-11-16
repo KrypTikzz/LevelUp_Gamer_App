@@ -1,0 +1,192 @@
+package com.example.levelup_gamerapp.ui
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.example.levelup_gamerapp.viewmodel.SesionViewModel
+import kotlinx.coroutines.launch
+
+/**
+ * Punto central de navegación de la aplicación. Gestiona el `Drawer`, la barra
+ * superior y delega en [AppNavGraph] la definición de las rutas.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AppNavHost() {
+    val navController = rememberNavController()
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val sesionViewModel: SesionViewModel = viewModel()
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            DrawerContent(
+                scope = scope,
+                drawerState = drawerState,
+                snackbarHostState = snackbarHostState,
+                onNavigate = { route ->
+                    scope.launch {
+                        drawerState.close()
+                        navController.navigate(route) {
+                            launchSingleTop = true
+                            restoreState = true
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                        }
+                    }
+                }
+            )
+        },
+        gesturesEnabled = true
+    ) {
+        Scaffold(
+            topBar = {
+                CenterAlignedTopAppBar(
+                    navigationIcon = {
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Icon(
+                                imageVector = Icons.Default.Menu,
+                                contentDescription = "Menú",
+                                tint = Color(0xFF39FF14)
+                            )
+                        }
+                    },
+                    title = {
+                        Text(
+                            text = "LEVEL-UP GAMER",
+                            color = Color(0xFF39FF14)
+                        )
+                    },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = Color.Black
+                    )
+                )
+            },
+            snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+            containerColor = Color.Black
+        ) { innerPadding ->
+            AppNavGraph(
+                navController = navController,
+                innerPadding = innerPadding,
+                sesionViewModel = sesionViewModel
+            )
+        }
+    }
+}
+
+/**
+ * Declaración del grafo de navegación. Aquí se definen todas las rutas
+ * disponibles en la aplicación. El `startDestination` se determina según
+ * si el usuario tiene sesión iniciada o no.
+ */
+@Composable
+private fun AppNavGraph(
+    navController: NavHostController,
+    innerPadding: PaddingValues,
+    sesionViewModel: SesionViewModel
+) {
+    val isLoggedIn by sesionViewModel.isLoggedIn.collectAsState()
+    val esAdmin by sesionViewModel.esAdmin.collectAsState()
+
+    NavHost(
+        navController = navController,
+        startDestination = if (isLoggedIn) "productos" else "login",
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)
+            .background(Color.Black)
+    ) {
+        // Pantalla de login
+        composable("login") {
+            LoginScreen(navController = navController, sesionViewModel = sesionViewModel)
+        }
+        // Pantalla de registro
+        composable("registro") {
+            RegistroUsuarioScreen(navController = navController)
+        }
+        // Pantalla principal (p.e. inicio)
+        composable("inicio") {
+            PantallaPrincipal(navController)
+        }
+        // Catálogo de productos
+        composable("productos") {
+            PantallaProductos(navController)
+        }
+        // Detalle de producto (para usuarios) -- reusa la misma pantalla
+        composable("producto/{id}") { backStackEntry ->
+            val id = backStackEntry.arguments?.getString("id")?.toIntOrNull()
+            if (id != null) {
+                PantallaProducto(id = id, onNavigateBack = { navController.popBackStack() })
+            } else {
+                PlaceholderScreen("Error: producto no encontrado")
+            }
+        }
+        // Secciones informativas
+        composable("novedades") { PantallaNovedades() }
+        composable("contacto") { PantallaContacto() }
+        composable("carrito") { PantallaCarrito() }
+        // Panel de administrador
+        composable("admin") {
+            if (esAdmin) {
+                PantallaAdmin(navController)
+            } else {
+                PlaceholderScreen("Acceso restringido")
+            }
+        }
+        // Pantalla para editar un producto existente (solo admin)
+        composable("editar_producto/{id}") { backStackEntry ->
+            val id = backStackEntry.arguments?.getString("id")?.toIntOrNull()
+            if (id != null && esAdmin) {
+                PantallaEditarProducto(navController, id)
+            } else {
+                PlaceholderScreen("Acceso restringido")
+            }
+        }
+
+        // Pantalla para crear o editar un usuario (solo admin)
+        composable("editar_usuario/{id}") { backStackEntry ->
+            val id = backStackEntry.arguments?.getString("id")?.toIntOrNull() ?: 0
+            if (esAdmin) {
+                PantallaEditarUsuario(navController, id)
+            } else {
+                PlaceholderScreen("Acceso restringido")
+            }
+        }
+    }
+}
+
+/**
+ * Pantalla simple para mostrar mensajes de error o acceso restringido.
+ */
+@Composable
+fun PlaceholderScreen(texto: String) {
+    Surface(color = Color.Black) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(32.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(texto, color = Color(0xFF1E90FF))
+        }
+    }
+}

@@ -1,0 +1,32 @@
+# ============================
+# 🚫 ARCHIVOS A IGNORAR EN ANDROID STUDIO
+# ============================
+
+# Archivos y carpetas del IDE
+.idea/
+*.iml
+.DS_Store
+
+# Gradle
+.gradle/
+build/
+*/build/
+local.properties
+gradle-app.setting
+
+# Configuración específica de usuario
+*.log
+*.hprof
+
+# Capturas, outputs y generados
+captures/
+output.json
+.externalNativeBuild/
+
+# Jetpack Compose / previews
+*.kt.snapshots
+
+# Archivos temporales
+*.tmp
+*.swp
+*~
