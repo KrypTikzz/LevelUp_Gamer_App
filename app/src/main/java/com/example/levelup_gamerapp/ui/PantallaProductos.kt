@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -21,53 +22,52 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.levelup_gamerapp.local.AppDatabase
+import com.example.levelup_gamerapp.remote.ProductoDTO
 import com.example.levelup_gamerapp.repository.CarritoRepository
 import com.example.levelup_gamerapp.repository.RemoteProductosRepository
-import com.example.levelup_gamerapp.remote.ProductoDTO
 import com.example.levelup_gamerapp.viewmodel.CarritoViewModel
 import com.example.levelup_gamerapp.viewmodel.CarritoViewModelFactory
-import com.example.levelup_gamerapp.viewmodel.ProductosViewModel
-import com.example.levelup_gamerapp.viewmodel.ProductosViewModelFactory
 
 /**
- * Muestra la lista de productos en una grilla. Permite filtrar por categoría y
- * añadir un producto al carrito. Para enviar el pedido al backend se utiliza
- * el [ProductosEntity.remoteId] cuando está presente; de lo contrario se usa
- * el identificador local del producto.
+ * Pantalla que muestra la grilla de productos obtenidos del backend.
+ * Se ofrecen filtros por categoría y un botón para añadir cada producto al carrito
+ * usando almacenamiento local.
  */
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaProductos(nav: NavController) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    // Obtenemos el DAO y creamos el repositorio y el ViewModel
-    // Creamos el repositorio remoto y el ViewModel asociado
-    val productosRepo = RemoteProductosRepository()
-    val viewModel: ProductosViewModel = viewModel(factory = ProductosViewModelFactory(productosRepo))
+    val context = LocalContext.current
+    val productosRepo = remember { RemoteProductosRepository() }
+    var listaProductos by remember { mutableStateOf<List<ProductoDTO>>(emptyList()) }
+    var cargando by remember { mutableStateOf(true) }
+    var errorMsg by remember { mutableStateOf<String?>(null) }
 
-    // Recuperamos la lista de productos desde el backend cuando se compone la pantalla
+    // Cargar productos una vez
     LaunchedEffect(Unit) {
-        viewModel.cargarProductos()
+        try {
+            listaProductos = productosRepo.obtenerProductos()
+            errorMsg = null
+        } catch (e: Exception) {
+            errorMsg = e.localizedMessage
+        } finally {
+            cargando = false
+        }
     }
 
-    // Observamos la lista de productos remotos. Se actualizará cuando se recargue desde el ViewModel.
-    val listaProductos by viewModel.productos.collectAsState()
-
-    // Calculamos las categorías únicas a partir de la lista de productos. Añadimos
-    // la opción "Todos" al principio.
+    // Construir lista de categorías a partir de los nombres de categoría de cada producto
     val categorias = remember(listaProductos) {
-        listOf("Todos") + listaProductos.map { it.categoriaProducto.trim() }
+        val cats = listaProductos.map { it.categoriaProducto.trim() }
             .filter { it.isNotEmpty() }
             .distinct()
             .sorted()
+        listOf("Todos") + cats
     }
 
-    // Estado del selector de categorías
     var expanded by remember { mutableStateOf(false) }
     var categoriaSeleccionadaIndex by remember { mutableStateOf(0) }
-    val categoriaSeleccionada = categorias.getOrElse(categoriaSeleccionadaIndex) { "Todos" }
+    val categoriaSeleccionada = categorias.getOrNull(categoriaSeleccionadaIndex) ?: "Todos"
 
-    // Filtramos la lista según la categoría seleccionada
     val productosFiltrados = remember(listaProductos, categoriaSeleccionada) {
         if (categoriaSeleccionada == "Todos") listaProductos
         else listaProductos.filter { it.categoriaProducto.trim() == categoriaSeleccionada }
@@ -88,90 +88,108 @@ fun PantallaProductos(nav: NavController) {
         },
         containerColor = Color.Black
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black)
-                .padding(padding)
-        ) {
-            if (listaProductos.isEmpty()) {
+        when {
+            cargando -> {
                 Box(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = Color(0xFF39FF14))
+                }
+            }
+            errorMsg != null -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = errorMsg ?: "Error desconocido",
+                        color = Color.White
+                    )
+                }
+            }
+            listaProductos.isEmpty() -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
                     contentAlignment = Alignment.Center
                 ) {
                     Text("No hay productos disponibles", color = Color.White)
                 }
-            } else {
-                // Selector desplegable de categorías
-                ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = !expanded },
+            }
+            else -> {
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
+                        .fillMaxSize()
+                        .padding(padding)
+                        .background(Color.Black)
                 ) {
-                    OutlinedTextField(
-                        value = categoriaSeleccionada,
-                        onValueChange = {},
-                        readOnly = true,
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            focusedContainerColor = Color(0xFF111111),
-                            unfocusedContainerColor = Color(0xFF111111),
-                            focusedLabelColor = Color(0xFF39FF14),
-                            unfocusedLabelColor = Color(0xFFCCCCCC)
-                        ),
-                        modifier = Modifier
-                            .menuAnchor()
-                            .fillMaxWidth()
-                    )
-                    ExposedDropdownMenu(
+                    // Selector de categoría
+                    ExposedDropdownMenuBox(
                         expanded = expanded,
-                        onDismissRequest = { expanded = false }
+                        onExpandedChange = { expanded = !expanded },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
                     ) {
-                        categorias.forEachIndexed { index, cat ->
-                            DropdownMenuItem(
-                                text = { Text(cat) },
-                                onClick = {
-                                    categoriaSeleccionadaIndex = index
-                                    expanded = false
-                                }
-                            )
+                        OutlinedTextField(
+                            value = categoriaSeleccionada,
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                focusedContainerColor = Color(0xFF111111),
+                                unfocusedContainerColor = Color(0xFF111111),
+                                focusedLabelColor = Color(0xFF39FF14),
+                                unfocusedLabelColor = Color(0xFFCCCCCC)
+                            ),
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            categorias.forEachIndexed { index, cat ->
+                                DropdownMenuItem(
+                                    text = { Text(cat) },
+                                    onClick = {
+                                        categoriaSeleccionadaIndex = index
+                                        expanded = false
+                                    }
+                                )
+                            }
                         }
                     }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Subtítulo con la categoría seleccionada
-                Text(
-                    text = if (categoriaSeleccionada == "Todos") "Nuestros productos"
-                    else "Categoría: $categoriaSeleccionada",
-                    fontSize = 16.sp,
-                    color = Color(0xFF1E90FF),
-                    modifier = Modifier.padding(start = 16.dp, bottom = 12.dp)
-                )
-
-                // Grilla de productos
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    contentPadding = PaddingValues(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(productosFiltrados) { producto ->
-                        ProductoCard(
-                            producto = producto,
-                            onClick = {
-                                // Navegamos utilizando el id remoto del producto si existe. Si el id es nulo
-                                // no navegamos a una pantalla de detalle específica.
-                                producto.id?.let { id ->
-                                    nav.navigate("producto/$id")
-                                }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    // Subtítulo
+                    Text(
+                        text = if (categoriaSeleccionada == "Todos") "Nuestros productos" else "Categoría: ${'$'}categoriaSeleccionada",
+                        fontSize = 16.sp,
+                        color = Color(0xFF1E90FF),
+                        modifier = Modifier.padding(start = 16.dp, bottom = 12.dp)
+                    )
+                    // Grilla de productos
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        contentPadding = PaddingValues(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(productosFiltrados) { producto ->
+                            ProductoCard(producto = producto) {
+                                // Navegamos al detalle pasando el id del producto
+                                nav.navigate("producto/${'$'}{producto.id}")
                             }
-                        )
+                        }
                     }
                 }
             }
@@ -180,17 +198,15 @@ fun PantallaProductos(nav: NavController) {
 }
 
 /**
- * Tarjeta individual de un producto remoto. Incluye un botón para añadir al
- * carrito. Utiliza el identificador remoto del producto para enviar
- * correctamente el pedido al backend.
+ * Tarjeta de un producto individual.
+ * Muestra la imagen, nombre, precio y un botón para añadir al carrito.
  */
 @Composable
 fun ProductoCard(producto: ProductoDTO, onClick: () -> Unit) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val carritoDao = AppDatabase.obtenerBaseDatos(context).carritoDao()
-    val repo = CarritoRepository(carritoDao)
-    val carritoVM: CarritoViewModel = viewModel(factory = CarritoViewModelFactory(repo))
-
+    val context = LocalContext.current
+    val db = AppDatabase.obtenerBaseDatos(context)
+    val cRepo = remember { CarritoRepository(db.carritoDao()) }
+    val carritoVM: CarritoViewModel = viewModel(factory = CarritoViewModelFactory(cRepo))
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -221,16 +237,15 @@ fun ProductoCard(producto: ProductoDTO, onClick: () -> Unit) {
                 fontSize = 14.sp
             )
             Text(
-                "$${producto.precioProducto}",
+                // Formateamos el precio con símbolo de dólar y dos decimales
+                text = "${'$'}${"%.2f".format(producto.precioProducto)}",
                 color = Color(0xFF1E90FF),
                 fontSize = 12.sp
             )
             Button(
                 onClick = {
-                    // El ID remoto nunca debería ser nulo al listar productos. Si lo fuera, usamos 0.
-                    val idParaCarrito = producto.id ?: 0L
                     carritoVM.agregarProductoAlCarrito(
-                        idProducto = idParaCarrito,
+                        idProducto = producto.id ?: 0L,
                         nombre = producto.nombreProducto,
                         precio = producto.precioProducto,
                         imagenUrl = producto.imagenUrl
@@ -238,7 +253,11 @@ fun ProductoCard(producto: ProductoDTO, onClick: () -> Unit) {
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF39FF14))
             ) {
-                Text("Agregar al carrito", color = Color.Black, fontWeight = FontWeight.Bold)
+                Text(
+                    "Agregar al carrito",
+                    color = Color.Black,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }

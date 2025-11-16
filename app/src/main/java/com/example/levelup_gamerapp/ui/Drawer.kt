@@ -9,7 +9,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.levelup_gamerapp.viewmodel.SesionViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -19,18 +18,17 @@ fun DrawerContent(
     scope: CoroutineScope,
     drawerState: DrawerState,
     snackbarHostState: SnackbarHostState,
+    sesionViewModel: SesionViewModel,
     onNavigate: (String) -> Unit
 ) {
-    // Obtenemos el ViewModel de sesión para conocer el estado del usuario
-    val sesionViewModel: SesionViewModel = viewModel()
     val isLoggedIn by sesionViewModel.isLoggedIn.collectAsState()
     val esAdmin by sesionViewModel.esAdmin.collectAsState()
 
-    // 🎨 Personalizamos el Snackbar
+    // 🎨 Snackbar del drawer
     SnackbarHost(hostState = snackbarHostState) { data ->
         val bgColor = when {
-            data.visuals.message.contains("cerrada") -> Color(0xFF00C853) // Verde éxito
-            data.visuals.message.contains("no hay", ignoreCase = true) -> Color(0xFFD32F2F) // Rojo error
+            data.visuals.message.contains("cerrada") -> Color(0xFF00C853) // éxito
+            data.visuals.message.contains("no hay", ignoreCase = true) -> Color(0xFFD32F2F) // error
             else -> Color.DarkGray
         }
         Snackbar(
@@ -55,14 +53,14 @@ fun DrawerContent(
             style = MaterialTheme.typography.titleLarge
         )
 
-        // 🟢 Opciones principales disponibles para todos los usuarios
+        // 🟢 Opciones principales
         DrawerItem("Inicio", "inicio", Color(0xFF1E90FF), onNavigate)
         DrawerItem("Productos", "productos", Color(0xFF39FF14), onNavigate)
         DrawerItem("Novedades", "novedades", Color(0xFF1E90FF), onNavigate)
         DrawerItem("Contacto", "contacto", Color(0xFFFFA500), onNavigate)
         DrawerItem("Carrito", "carrito", Color(0xFFFFA500), onNavigate)
 
-        // Si el usuario es administrador, se muestra la opción Admin
+        // Admin
         if (isLoggedIn && esAdmin) {
             DrawerItem("Administrador", "admin", Color(0xFFE91E63), onNavigate)
         }
@@ -71,13 +69,11 @@ fun DrawerContent(
         Divider(color = Color(0xFF222222), thickness = 1.dp)
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Opciones de autenticación
+        // Login / logout
         if (!isLoggedIn) {
-            // Si no hay sesión, mostramos opciones para login y registro
             DrawerItem("Login", "login", Color(0xFF1E90FF), onNavigate)
             DrawerItem("Registro", "registro", Color(0xFFE91E63), onNavigate)
         } else {
-            // Si hay sesión, mostramos botón para cerrar sesión
             Spacer(modifier = Modifier.height(40.dp))
             Button(
                 onClick = {

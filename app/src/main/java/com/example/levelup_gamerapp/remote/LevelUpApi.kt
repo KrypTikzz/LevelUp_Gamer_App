@@ -1,67 +1,91 @@
 package com.example.levelup_gamerapp.remote
 
 import retrofit2.Response
-import retrofit2.http.Body
-import retrofit2.http.DELETE
-import retrofit2.http.GET
-import retrofit2.http.POST
-import retrofit2.http.Path
+import retrofit2.http.*
 
 /**
- * Interface de Retrofit que define todas las llamadas al backend de LevelUp Gamer.
- * Se añaden métodos para listar y crear productos, categorías y usuarios,
- * además del ya existente para crear pedidos. Cada llamada devuelve un
- * `Response` cuando es necesario comprobar el código HTTP o, en caso de
- * colecciones sencillas, se devuelve la lista directamente.
+ * Declaración de todas las rutas que expone el backend de LevelUp Gamer.
+ * Esta interfaz es utilizada por Retrofit para generar automáticamente las
+ * implementaciones que realizan las peticiones HTTP.
+ *
+ * Se han añadido las operaciones de productos, categorías y usuarios para
+ * completar la migración a un backend 100 % remoto.
  */
 interface LevelUpApi {
-    /**
-     * Registra un nuevo pedido en el backend. Devuelve un [Response] para
-     * permitir comprobar si la operación fue exitosa a nivel HTTP.
-     */
-    @POST("api/pedidos")
-    suspend fun crearPedido(@Body request: CrearPedidoRequest): Response<Unit>
+    // ---------- Productos ----------
 
-    /**
-     * Obtiene la lista completa de productos disponibles en el backend.
-     */
+    /** Obtiene el listado completo de productos. */
     @GET("api/productos")
     suspend fun obtenerProductos(): List<ProductoDTO>
 
-    /**
-     * Crea un nuevo producto en el backend y devuelve el producto creado.
-     */
+    /** Obtiene los detalles de un producto concreto. */
+    @GET("api/productos/{id}")
+    suspend fun obtenerProducto(@Path("id") id: Long): ProductoDTO
+
+    /** Crea un nuevo producto en el backend. */
     @POST("api/productos")
     suspend fun crearProducto(@Body producto: ProductoDTO): Response<ProductoDTO>
 
-    /**
-     * Elimina un producto por su identificador. Devuelve una respuesta vacía
-     * con el código HTTP de la operación.
-     */
+    /** Actualiza un producto existente. */
+    @PUT("api/productos/{id}")
+    suspend fun actualizarProducto(
+        @Path("id") id: Long,
+        @Body producto: ProductoDTO
+    ): Response<ProductoDTO>
+
+    /** Elimina un producto por su identificador. */
     @DELETE("api/productos/{id}")
     suspend fun eliminarProducto(@Path("id") id: Long): Response<Unit>
 
-    /**
-     * Obtiene todas las categorías existentes en el backend.
-     */
+    // ---------- Categorías ----------
+
+    /** Devuelve todas las categorías disponibles. */
     @GET("api/categorias")
     suspend fun obtenerCategorias(): List<CategoriaDTO>
 
-    /**
-     * Crea una nueva categoría y devuelve la categoría resultante.
-     */
+    /** Crea una nueva categoría. */
     @POST("api/categorias")
     suspend fun crearCategoria(@Body categoria: CategoriaDTO): Response<CategoriaDTO>
 
-    /**
-     * Obtiene todos los usuarios registrados en el backend.
-     */
+    // ---------- Usuarios ----------
+
+    /** Obtiene el listado completo de usuarios. */
     @GET("api/usuarios")
     suspend fun obtenerUsuarios(): List<UsuarioDTO>
 
-    /**
-     * Registra un nuevo usuario en el backend y devuelve el usuario creado.
-     */
+    /** Obtiene los detalles de un usuario. */
+    @GET("api/usuarios/{id}")
+    suspend fun obtenerUsuario(@Path("id") id: Long): UsuarioDTO
+
+    /** Crea un usuario. */
     @POST("api/usuarios")
     suspend fun crearUsuario(@Body usuario: UsuarioDTO): Response<UsuarioDTO>
+
+    /** Actualiza un usuario existente. */
+    @PUT("api/usuarios/{id}")
+    suspend fun actualizarUsuario(
+        @Path("id") id: Long,
+        @Body usuario: UsuarioDTO
+    ): Response<UsuarioDTO>
+
+    /** Elimina un usuario por su identificador. */
+    @DELETE("api/usuarios/{id}")
+    suspend fun eliminarUsuario(@Path("id") id: Long): Response<Unit>
+
+    /** Busca un usuario por su correo electrónico. */
+    @GET("api/usuarios/buscar")
+    suspend fun buscarUsuarioPorCorreo(@Query("correo") correo: String): UsuarioDTO?
+
+    /** Realiza el login de un usuario. */
+    @POST("api/usuarios/login")
+    suspend fun login(
+        @Query("correo") correo: String,
+        @Query("contrasena") contrasena: String
+    ): UsuarioDTO?
+
+    // ---------- Pedidos ----------
+
+    /** Registra un nuevo pedido. */
+    @POST("api/pedidos")
+    suspend fun crearPedido(@Body request: CrearPedidoRequest): Response<PedidoResponseDTO>
 }

@@ -1,67 +1,68 @@
 package com.example.levelup_gamerapp.ui
 
-import android.graphics.Bitmap
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import coil.compose.rememberAsyncImagePainter
-import com.example.levelup_gamerapp.local.AppDatabase
-import com.example.levelup_gamerapp.local.RegistroUsuarioEntity
-import com.example.levelup_gamerapp.repository.RegistroUsuarioRepository
-import com.example.levelup_gamerapp.viewmodel.UsuariosViewModel
-import com.example.levelup_gamerapp.viewmodel.UsuariosViewModelFactory
+import com.example.levelup_gamerapp.remote.UsuarioDTO
+import com.example.levelup_gamerapp.repository.RemoteUsuariosRepository
+import kotlinx.coroutines.launch
 
 /**
- * Pantalla para crear o editar un usuario. Si el id proporcionado es 0 se
- * interpretará como creación de un nuevo usuario; de lo contrario, se
- * precargarán los datos del usuario existente y se podrá modificarlos.
- *
- * @param navController controlador de navegación para volver a la lista
- * @param id identificador del usuario a editar (0 para crear uno nuevo)
+ * Pantalla para crear o editar un usuario desde el backend.
+ * Si el parámetro [id] es 0 se considera creación, en caso contrario se
+ * cargan los datos del usuario existente para su edición. Las operaciones se
+ * realizan a través de [RemoteUsuariosRepository].
  */
 @Composable
 fun PantallaEditarUsuario(navController: NavController, id: Int) {
-    val context = LocalContext.current
-    val usuarioDao = remember { AppDatabase.getDatabase(context).registroUsuarioDao() }
-    val repo = remember { RegistroUsuarioRepository(usuarioDao) }
-    val usuariosViewModel: UsuariosViewModel = viewModel(factory = UsuariosViewModelFactory(repo))
+    val repo = remember { RemoteUsuariosRepository() }
+    val scope = rememberCoroutineScope()
+    var cargando by remember { mutableStateOf(true) }
+    var errorMsg by remember { mutableStateOf<String?>(null) }
+    var usuarioRemoto by remember { mutableStateOf<UsuarioDTO?>(null) }
 
-    // Obtenemos el usuario a editar, salvo que id sea 0 (nuevo)
-    val usuario by usuariosViewModel.obtenerUsuarioPorId(id).collectAsState(initial = null)
-
-    // Estados para los campos, inicializados con los valores del usuario cuando esté disponible
+    // Estados de formulario
     var nombre by remember { mutableStateOf("") }
     var apellido by remember { mutableStateOf("") }
     var correo by remember { mutableStateOf("") }
     var contrasena by remember { mutableStateOf("") }
     var edad by remember { mutableStateOf("") }
-    var descuentoAplicado by remember { mutableStateOf("0") }
-    var fotoPerfilBytes by remember { mutableStateOf<ByteArray?>(null) }
+    var admin by remember { mutableStateOf(false) }
 
-    LaunchedEffect(usuario) {
-        if (usuario != null && id != 0) {
-            nombre = usuario!!.nombre
-            apellido = usuario!!.apellido
-            correo = usuario!!.correo
-            contrasena = usuario!!.contrasena
-            edad = usuario!!.edad.toString()
-            descuentoAplicado = usuario!!.descuentoAplicado.toString()
-            fotoPerfilBytes = usuario!!.fotoPerfil
+    // Cargar usuario existente si aplica
+    LaunchedEffect(id) {
+        if (id != 0) {
+            try {
+                val usuario = repo.obtenerUsuario(id.toLong())
+                usuarioRemoto = usuario
+                nombre = usuario.nombre
+                apellido = usuario.apellido
+                correo = usuario.correo
+                contrasena = usuario.contrasena
+                edad = usuario.edad.toString()
+                admin = usuario.admin
+                errorMsg = null
+            } catch (e: Exception) {
+                errorMsg = e.localizedMessage
+            } finally {
+                cargando = false
+            }
+        } else {
+            cargando = false
         }
     }
 
+    // UI
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -72,7 +73,7 @@ fun PantallaEditarUsuario(navController: NavController, id: Int) {
             style = MaterialTheme.typography.headlineMedium
         )
         Spacer(modifier = Modifier.height(8.dp))
-
+        // Campos de entrada
         OutlinedTextField(
             value = nombre,
             onValueChange = { nombre = it },
@@ -90,14 +91,13 @@ fun PantallaEditarUsuario(navController: NavController, id: Int) {
             onValueChange = { correo = it },
             label = { Text("Correo") },
             modifier = Modifier.fillMaxWidth(),
-            enabled = id == 0 // no permitimos modificar correo en edición
+            enabled = id == 0
         )
         OutlinedTextField(
             value = contrasena,
             onValueChange = { contrasena = it },
             label = { Text("Contraseña") },
             modifier = Modifier.fillMaxWidth(),
-            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
             singleLine = true
         )
         OutlinedTextField(
@@ -106,69 +106,74 @@ fun PantallaEditarUsuario(navController: NavController, id: Int) {
             label = { Text("Edad") },
             modifier = Modifier.fillMaxWidth()
         )
-        OutlinedTextField(
-            value = descuentoAplicado,
-            onValueChange = { descuentoAplicado = it },
-            label = { Text("Descuento aplicado") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        fotoPerfilBytes?.let { bytes ->
-            Spacer(modifier = Modifier.height(8.dp))
-            // Mostrar la foto de perfil si existe (simple vista previa)
-            val bitmap = remember(bytes) { android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size) }
-            Image(
-                bitmap = bitmap.asImageBitmap(),
-                contentDescription = "Foto de perfil",
-                modifier = Modifier
-                    .size(120.dp)
-            )
-        }
-
         Spacer(modifier = Modifier.height(16.dp))
-
         // Botón Guardar
-        Button(onClick = {
-            val edadInt = edad.toIntOrNull() ?: 0
-            val descuentoInt = descuentoAplicado.toIntOrNull() ?: 0
-            if (nombre.isNotBlank() && apellido.isNotBlank() && correo.isNotBlank() && contrasena.isNotBlank()) {
-                val usuarioEntity = RegistroUsuarioEntity(
-                    id = if (id == 0) 0 else usuario!!.id,
-                    nombre = nombre.trim(),
-                    apellido = apellido.trim(),
-                    correo = correo.trim(),
-                    contrasena = contrasena,
-                    edad = edadInt,
-                    descuentoAplicado = descuentoInt,
-                    fotoPerfil = fotoPerfilBytes
-                )
-                if (id == 0) {
-                    usuariosViewModel.registrarUsuario(usuarioEntity)
-                } else {
-                    usuariosViewModel.actualizarUsuario(usuarioEntity)
+        Button(
+            onClick = {
+                val edadInt = edad.toIntOrNull() ?: 0
+                if (nombre.isNotBlank() && apellido.isNotBlank() && correo.isNotBlank() && contrasena.isNotBlank()) {
+                    val dto = UsuarioDTO(
+                        id = if (id == 0) null else id.toLong(),
+                        nombre = nombre.trim(),
+                        apellido = apellido.trim(),
+                        correo = correo.trim(),
+                        contrasena = contrasena,
+                        edad = edadInt,
+                        admin = admin
+                    )
+                    scope.launch {
+                        try {
+                            if (id == 0) {
+                                repo.crearUsuario(dto)
+                            } else {
+                                repo.actualizarUsuario(id.toLong(), dto)
+                            }
+                            navController.popBackStack()
+                        } catch (e: Exception) {
+                            errorMsg = e.localizedMessage
+                        }
+                    }
                 }
-                navController.popBackStack()
-            }
-        }, modifier = Modifier.fillMaxWidth()) {
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Text("Guardar")
         }
-
         Spacer(modifier = Modifier.height(8.dp))
-
-        // Botón Eliminar (solo si el usuario ya existe y no es el admin principal)
-        if (id != 0 && usuario != null && usuario!!.correo != "admin@levelupgamer.cl") {
-            Button(onClick = {
-                usuariosViewModel.eliminarUsuario(usuario!!.id)
-                navController.popBackStack()
-            }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) {
+        // Botón Eliminar (solo si el usuario existe y no es admin principal)
+        if (id != 0 && usuarioRemoto != null && usuarioRemoto!!.correo != "admin@levelupgamer.cl") {
+            Button(
+                onClick = {
+                    scope.launch {
+                        try {
+                            repo.eliminarUsuario(id.toLong())
+                            navController.popBackStack()
+                        } catch (e: Exception) {
+                            errorMsg = e.localizedMessage
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
                 Text("Eliminar")
             }
             Spacer(modifier = Modifier.height(8.dp))
         }
-
         // Botón Cancelar
-        TextButton(onClick = { navController.popBackStack() }, modifier = Modifier.fillMaxWidth()) {
+        TextButton(
+            onClick = { navController.popBackStack() },
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Text("Cancelar")
+        }
+        // Mostrar mensaje de error si corresponde
+        errorMsg?.let { msg ->
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = msg,
+                color = MaterialTheme.colorScheme.error
+            )
         }
     }
 }

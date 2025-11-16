@@ -6,7 +6,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -43,13 +42,16 @@ fun AppNavHost() {
                 scope = scope,
                 drawerState = drawerState,
                 snackbarHostState = snackbarHostState,
+                sesionViewModel = sesionViewModel,
                 onNavigate = { route ->
                     scope.launch {
                         drawerState.close()
                         navController.navigate(route) {
                             launchSingleTop = true
                             restoreState = true
-                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            popUpTo(navController.graph.startDestinationId) {
+                                saveState = true
+                            }
                         }
                     }
                 }
@@ -93,9 +95,7 @@ fun AppNavHost() {
 }
 
 /**
- * Declaración del grafo de navegación. Aquí se definen todas las rutas
- * disponibles en la aplicación. El `startDestination` se determina según
- * si el usuario tiene sesión iniciada o no.
+ * Declaración del grafo de navegación.
  */
 @Composable
 private fun AppNavGraph(
@@ -122,19 +122,22 @@ private fun AppNavGraph(
         composable("registro") {
             RegistroUsuarioScreen(navController = navController)
         }
-        // Pantalla principal (p.e. inicio)
+        // Pantalla principal (home con destacados)
         composable("inicio") {
             PantallaPrincipal(navController)
         }
-        // Catálogo de productos
+        // Catálogo de productos (remoto)
         composable("productos") {
             PantallaProductos(navController)
         }
-        // Detalle de producto (para usuarios) -- reusa la misma pantalla
+        // Detalle de producto
         composable("producto/{id}") { backStackEntry ->
             val id = backStackEntry.arguments?.getString("id")?.toIntOrNull()
             if (id != null) {
-                PantallaProducto(id = id, onNavigateBack = { navController.popBackStack() })
+                PantallaProducto(
+                    id = id,
+                    onNavigateBack = { navController.popBackStack() }
+                )
             } else {
                 PlaceholderScreen("Error: producto no encontrado")
             }
@@ -143,6 +146,7 @@ private fun AppNavGraph(
         composable("novedades") { PantallaNovedades() }
         composable("contacto") { PantallaContacto() }
         composable("carrito") { PantallaCarrito() }
+
         // Panel de administrador
         composable("admin") {
             if (esAdmin) {
@@ -151,7 +155,8 @@ private fun AppNavGraph(
                 PlaceholderScreen("Acceso restringido")
             }
         }
-        // Pantalla para editar un producto existente (solo admin)
+
+        // Editar producto (admin)
         composable("editar_producto/{id}") { backStackEntry ->
             val id = backStackEntry.arguments?.getString("id")?.toIntOrNull()
             if (id != null && esAdmin) {
@@ -161,7 +166,7 @@ private fun AppNavGraph(
             }
         }
 
-        // Pantalla para crear o editar un usuario (solo admin)
+        // Editar usuario (admin)
         composable("editar_usuario/{id}") { backStackEntry ->
             val id = backStackEntry.arguments?.getString("id")?.toIntOrNull() ?: 0
             if (esAdmin) {
@@ -174,7 +179,7 @@ private fun AppNavGraph(
 }
 
 /**
- * Pantalla simple para mostrar mensajes de error o acceso restringido.
+ * Pantalla simple para mensajes de error / acceso restringido.
  */
 @Composable
 fun PlaceholderScreen(texto: String) {

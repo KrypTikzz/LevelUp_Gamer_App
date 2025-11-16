@@ -2,13 +2,14 @@ package com.example.levelup_gamerapp.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -19,56 +20,71 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import coil.compose.rememberAsyncImagePainter
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
-import androidx.compose.foundation.clickable
-import com.example.levelup_gamerapp.local.AppDatabase
-import com.example.levelup_gamerapp.local.ProductosEntity
-import com.example.levelup_gamerapp.repository.ProductosRepository
-import com.example.levelup_gamerapp.viewmodel.ProductosViewModel
-import com.example.levelup_gamerapp.viewmodel.ProductosViewModelFactory
-
-data class Producto(
-    val nombre: String,
-    val precio: String,
-    val imagenUrl: String
-)
-
-data class Categoria(
-    val nombre: String,
-    val iconUrl: String
-)
+import com.example.levelup_gamerapp.remote.ProductoDTO
+import com.example.levelup_gamerapp.repository.RemoteProductosRepository
 
 @Composable
 fun PantallaPrincipal(navController: NavHostController) {
-    // ViewModel de productos para obtener los destacados desde la base de datos
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val productosDao = remember { AppDatabase.getDatabase(context).productosDao() }
-    val repo = remember { ProductosRepository(productosDao) }
-    val productosViewModel: ProductosViewModel = viewModel(factory = ProductosViewModelFactory(repo))
-    val listaProductos by productosViewModel.productos.collectAsState()
+    val productosRepo = remember { RemoteProductosRepository() }
+    var listaProductos by remember { mutableStateOf<List<ProductoDTO>>(emptyList()) }
+    var cargando by remember { mutableStateOf(true) }
+    var errorMsg by remember { mutableStateOf<String?>(null) }
 
-    // Cargar productos al iniciar
+    // Cargar productos destacados desde el backend al iniciar
     LaunchedEffect(Unit) {
-        productosViewModel.cargarProductos()
+        try {
+            listaProductos = productosRepo.obtenerProductos()
+            errorMsg = null
+        } catch (e: Exception) {
+            errorMsg = e.localizedMessage
+        } finally {
+            cargando = false
+        }
     }
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black)
-    ) {
-        item { BannerPrincipal() }
-        item {
-            ProductosDestacados(
-                productos = listaProductos,
-                onProductoClick = { productoId -> navController.navigate("producto/$productoId") }
-            )
+    when {
+        cargando -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = Color(0xFF39FF14))
+            }
         }
-        item { FooterSeccion() }
+        errorMsg != null -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = errorMsg ?: "Error al cargar productos",
+                    color = Color.White
+                )
+            }
+        }
+        else -> {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+            ) {
+                item { BannerPrincipal() }
+                item {
+                    ProductosDestacados(
+                        productos = listaProductos,
+                        onProductoClick = { productoId ->
+                            // Navegamos al detalle; el NavGraph espera un Int
+                            navController.navigate("producto/${productoId.toInt()}")
+                        }
+                    )
+                }
+                item { FooterSeccion() }
+            }
+        }
     }
 }
 
@@ -94,19 +110,28 @@ fun BannerPrincipal() {
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("PRODUCTOS DESTACADOS", color = Color(0xFF39FF14), fontSize = 22.sp, fontWeight = FontWeight.Bold)
-            Text("Lo más vendido esta semana", color = Color(0xFF1E90FF), fontSize = 16.sp)
+            Text(
+                "PRODUCTOS DESTACADOS",
+                color = Color(0xFF39FF14),
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                "Lo más vendido esta semana",
+                color = Color(0xFF1E90FF),
+                fontSize = 16.sp
+            )
         }
     }
 }
 
 @Composable
 fun ProductosDestacados(
-    productos: List<ProductosEntity>,
-    onProductoClick: (Int) -> Unit
+    productos: List<ProductoDTO>,
+    onProductoClick: (Long) -> Unit
 ) {
     // Tomamos los primeros 4 productos como destacados
-    val destacados = if (productos.size > 4) productos.take(4) else productos
+    val destacados = productos.take(4)
 
     Text(
         "Destacados",
@@ -136,7 +161,9 @@ fun ProductosDestacados(
                     modifier = Modifier
                         .padding(8.dp)
                         .fillMaxWidth()
-                        .clickable { onProductoClick(producto.id) },
+                        .clickable {
+                            producto.id?.let { onProductoClick(it) }
+                        },
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF111111))
                 ) {
                     Column(
@@ -145,22 +172,29 @@ fun ProductosDestacados(
                     ) {
                         Image(
                             painter = rememberAsyncImagePainter(producto.imagenUrl),
-                            contentDescription = producto.nombre,
+                            contentDescription = producto.nombreProducto,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(100.dp),
                             contentScale = ContentScale.Crop
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(producto.nombre, color = Color(0xFF39FF14), fontWeight = FontWeight.Bold)
-                        Text("$${producto.precio}", color = Color(0xFF1E90FF), fontSize = 14.sp)
+                        Text(
+                            producto.nombreProducto,
+                            color = Color(0xFF39FF14),
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Precio: $${"%.2f".format(producto.precioProducto)}",
+                            color = Color(0xFF1E90FF),
+                            fontSize = 14.sp
+                        )
                     }
                 }
             }
         }
     }
 }
-
 
 @Composable
 fun FooterSeccion() {
