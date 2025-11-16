@@ -23,7 +23,7 @@ import com.example.levelup_gamerapp.viewmodel.ProductosViewModelFactory
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 
-@OptIn(ExperimentalMaterial3Api::class) // ⬅️ habilita TopAppBar experimental si tu versión lo exige
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaProducto(
     id: Int,
@@ -36,7 +36,7 @@ fun PantallaProducto(
     val pRepo = ProductosRepository(pDao)
     val pVM: ProductosViewModel = viewModel(factory = ProductosViewModelFactory(pRepo))
 
-    // ViewModel de carrito (opcional, por si quieres agregar)
+    // ViewModel de carrito
     val cDao = AppDatabase.obtenerBaseDatos(context).carritoDao()
     val cRepo = CarritoRepository(cDao)
     val carritoVM: CarritoViewModel = viewModel(factory = CarritoViewModelFactory(cRepo))
@@ -108,7 +108,14 @@ fun PantallaProducto(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Button(
-                        onClick = { carritoVM.agregarProductoAlCarrito(p.nombre, p.precio, p.imagenUrl) }
+                        onClick = {
+                            carritoVM.agregarProductoAlCarrito(
+                                idProducto = p.id.toLong(),   // 👈 ID real del producto
+                                nombre = p.nombre,
+                                precio = p.precio,
+                                imagenUrl = p.imagenUrl
+                            )
+                        }
                     ) {
                         Text("🛒 Agregar al carrito")
                     }

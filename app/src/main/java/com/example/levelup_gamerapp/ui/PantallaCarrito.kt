@@ -21,7 +21,7 @@ import com.example.levelup_gamerapp.local.CarritoEntity
 import com.example.levelup_gamerapp.repository.CarritoRepository
 import com.example.levelup_gamerapp.viewmodel.CarritoViewModel
 import com.example.levelup_gamerapp.viewmodel.CarritoViewModelFactory
-import kotlinx.coroutines.launch   // 🔹 NUEVO
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,17 +39,20 @@ fun PantallaCarrito() {
 
     val carrito by carritoVM.carrito.collectAsState(initial = emptyList())
 
-    // Agrupar productos por nombre, precio e imagen para combinar cantidades
+    // 🔹 AGRUPAR POR idProducto (no por Triple(nombre, precio, imagen))
     val carritoAgrupado = remember(carrito) {
-        carrito.groupBy { Triple(it.nombreProducto, it.precio, it.imagenUrl) }
-            .map { (clave, items) ->
-                val (nombre, precio, imagenUrl) = clave
+        carrito
+            .groupBy { it.idProducto } // 👈 clave: id del producto real
+            .map { (_, items) ->
+                val primero = items.first()
                 val cantidadTotal = items.sumOf { it.cantidad }
-                items.first().copy(cantidad = cantidadTotal)
+                // devolvemos una copia con la cantidad total
+                primero.copy(cantidad = cantidadTotal)
             }
     }
 
-    val total = carrito.sumOf { it.precio * it.cantidad }
+    // Total coherente con lo que se muestra
+    val total = carritoAgrupado.sumOf { it.precio * it.cantidad }
 
     // 🔹 Para lanzar corrutinas desde la UI
     val scope = rememberCoroutineScope()
@@ -72,7 +75,6 @@ fun PantallaCarrito() {
         },
         containerColor = Color.Black,
         snackbarHost = {
-            // 🔹 Host personalizado para que el snackbar sea oscuro con texto legible
             SnackbarHost(hostState = snackbarHostState) { data ->
                 Snackbar(
                     snackbarData = data,
@@ -147,11 +149,11 @@ fun PantallaCarrito() {
                                         return@launch
                                     }
 
-                                    // 1) Verificar stock
+                                    // 1) Verificar stock usando idProducto
                                     var errorMensaje: String? = null
                                     for (item in carritoAgrupado) {
                                         val producto =
-                                            productosDao.obtenerProductoPorNombre(item.nombreProducto)
+                                            productosDao.obtenerProductoPorId(item.idProducto.toInt())
                                         if (producto == null) {
                                             errorMensaje =
                                                 "Producto '${item.nombreProducto}' no encontrado en catálogo."
@@ -169,10 +171,10 @@ fun PantallaCarrito() {
                                         return@launch
                                     }
 
-                                    // 2) Descontar stock
+                                    // 2) Descontar stock usando idProducto
                                     for (item in carritoAgrupado) {
                                         val producto =
-                                            productosDao.obtenerProductoPorNombre(item.nombreProducto)
+                                            productosDao.obtenerProductoPorId(item.idProducto.toInt())
                                         if (producto != null) {
                                             val actualizado = producto.copy(
                                                 cantidadDisponible = producto.cantidadDisponible - item.cantidad

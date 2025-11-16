@@ -195,7 +195,12 @@ fun ProductoCard(producto: ProductosEntity, onClick: () -> Unit) {
 
             Button(
                 onClick = {
-                    carritoVM.agregarProductoAlCarrito(producto.nombre, producto.precio, producto.imagenUrl)
+                    carritoVM.agregarProductoAlCarrito(
+                        idProducto = producto.id.toLong(),      // 👈 ID real de ProductosEntity
+                        nombre = producto.nombre,
+                        precio = producto.precio,
+                        imagenUrl = producto.imagenUrl
+                    )
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF39FF14))
             ) {
