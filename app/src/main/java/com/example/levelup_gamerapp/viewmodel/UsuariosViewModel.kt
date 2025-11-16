@@ -3,78 +3,53 @@ package com.example.levelup_gamerapp.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.levelup_gamerapp.local.RegistroUsuarioEntity
-import com.example.levelup_gamerapp.repository.RegistroUsuarioRepository
+import com.example.levelup_gamerapp.remote.UsuarioDTO
+import com.example.levelup_gamerapp.repository.RemoteUsuariosRepository
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * ViewModel dedicado a la administración de usuarios. Permite observar la lista
- * completa de usuarios, obtener usuarios individuales, así como crear, actualizar
- * y eliminar registros. Está pensado para ser utilizado en las pantallas de
- * administración donde un usuario con permisos pueda gestionar las cuentas.
+ * ViewModel dedicado a la gestión de usuarios a través del backend. Sustituye
+ * la versión anterior que utilizaba Room para almacenar usuarios localmente.
+ * Este ViewModel utiliza [RemoteUsuariosRepository] para listar y crear
+ * usuarios en el servidor. Los datos se exponen mediante un [StateFlow] para
+ * que la interfaz pueda reaccionar a los cambios.
  */
-class UsuariosViewModel(private val repository: RegistroUsuarioRepository) : ViewModel() {
+class UsuariosViewModel(private val repository: RemoteUsuariosRepository) : ViewModel() {
+    // Flujo interno de usuarios
+    private val _usuarios = MutableStateFlow<List<UsuarioDTO>>(emptyList())
+    /** Flujo observable para la UI */
+    val usuarios: StateFlow<List<UsuarioDTO>> = _usuarios.asStateFlow()
 
-    /**
-     * Flujo que emite la lista de usuarios. Se comparte en el scope de este
-     * ViewModel para no recrear observadores innecesarios.
-     */
-    val usuarios: StateFlow<List<RegistroUsuarioEntity>> =
-        repository.obtenerUsuarios()
-            .map { it.sortedBy { user -> user.id } }
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5000),
-                initialValue = emptyList()
-            )
-
-    /**
-     * Devuelve un flujo reactivo con el usuario cuyo id coincida. Puede emitir null.
-     */
-    fun obtenerUsuarioPorId(id: Int) = repository.obtenerUsuarioPorId(id)
-
-    /**
-     * Inserta un nuevo usuario en la base de datos.
-     */
-    fun registrarUsuario(usuario: RegistroUsuarioEntity) {
+    /** Recupera la lista de usuarios desde el servidor. */
+    fun cargarUsuarios() {
         viewModelScope.launch {
-            repository.registrarUsuario(usuario)
+            _usuarios.value = repository.obtenerUsuarios()
         }
     }
 
-    /**
-     * Actualiza un usuario existente.
-     */
-    fun actualizarUsuario(usuario: RegistroUsuarioEntity) {
+    /** Crea un nuevo usuario en el backend y recarga la lista. */
+    fun crearUsuario(usuario: UsuarioDTO) {
         viewModelScope.launch {
-            repository.actualizarUsuario(usuario)
-        }
-    }
-
-    /**
-     * Elimina un usuario por id.
-     */
-    fun eliminarUsuario(id: Int) {
-        viewModelScope.launch {
-            repository.eliminarUsuario(id)
+            repository.crearUsuario(usuario)
+            cargarUsuarios()
         }
     }
 }
 
 /**
- * Factory para crear instancias de [UsuariosViewModel] proporcionando el
- * repositorio correspondiente.
+ * Factory para crear instancias de [UsuariosViewModel] inyectando el
+ * repositorio remoto. Permite desacoplar la creación del ViewModel de la
+ * lógica de la actividad o fragmento.
  */
-class UsuariosViewModelFactory(private val repository: RegistroUsuarioRepository) : ViewModelProvider.Factory {
+class UsuariosViewModelFactory(private val repository: RemoteUsuariosRepository) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(UsuariosViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
             return UsuariosViewModel(repository) as T
         }
-        throw IllegalArgumentException("Unknown ViewModel class")
+        throw IllegalArgumentException("Clase ViewModel desconocida")
     }
 }

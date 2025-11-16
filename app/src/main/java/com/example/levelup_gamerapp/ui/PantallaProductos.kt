@@ -21,41 +21,56 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.levelup_gamerapp.local.AppDatabase
-import com.example.levelup_gamerapp.local.ProductosEntity
 import com.example.levelup_gamerapp.repository.CarritoRepository
-import com.example.levelup_gamerapp.repository.ProductosRepository
+import com.example.levelup_gamerapp.repository.RemoteProductosRepository
+import com.example.levelup_gamerapp.remote.ProductoDTO
 import com.example.levelup_gamerapp.viewmodel.CarritoViewModel
 import com.example.levelup_gamerapp.viewmodel.CarritoViewModelFactory
 import com.example.levelup_gamerapp.viewmodel.ProductosViewModel
 import com.example.levelup_gamerapp.viewmodel.ProductosViewModelFactory
 
+/**
+ * Muestra la lista de productos en una grilla. Permite filtrar por categoría y
+ * añadir un producto al carrito. Para enviar el pedido al backend se utiliza
+ * el [ProductosEntity.remoteId] cuando está presente; de lo contrario se usa
+ * el identificador local del producto.
+ */
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaProductos(nav: NavController) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val dao = AppDatabase.obtenerBaseDatos(context).productosDao()
-    val repository = ProductosRepository(dao)
-    val viewModel: ProductosViewModel = viewModel(factory = ProductosViewModelFactory(repository))
+    // Obtenemos el DAO y creamos el repositorio y el ViewModel
+    // Creamos el repositorio remoto y el ViewModel asociado
+    val productosRepo = RemoteProductosRepository()
+    val viewModel: ProductosViewModel = viewModel(factory = ProductosViewModelFactory(productosRepo))
+
+    // Recuperamos la lista de productos desde el backend cuando se compone la pantalla
+    LaunchedEffect(Unit) {
+        viewModel.cargarProductos()
+    }
+
+    // Observamos la lista de productos remotos. Se actualizará cuando se recargue desde el ViewModel.
     val listaProductos by viewModel.productos.collectAsState()
 
-    // categorías únicas + "Todos"
+    // Calculamos las categorías únicas a partir de la lista de productos. Añadimos
+    // la opción "Todos" al principio.
     val categorias = remember(listaProductos) {
-        listOf("Todos") + listaProductos.map { it.categoria.trim() }
+        listOf("Todos") + listaProductos.map { it.categoriaProducto.trim() }
             .filter { it.isNotEmpty() }
             .distinct()
             .sorted()
     }
 
-    // estado del selector
+    // Estado del selector de categorías
     var expanded by remember { mutableStateOf(false) }
     var categoriaSeleccionadaIndex by remember { mutableStateOf(0) }
-    val categoriaSeleccionada = categorias.getOrNull(categoriaSeleccionadaIndex) ?: "Todos"
+    val categoriaSeleccionada = categorias.getOrElse(categoriaSeleccionadaIndex) { "Todos" }
 
-    // filtrado por categoría
+    // Filtramos la lista según la categoría seleccionada
     val productosFiltrados = remember(listaProductos, categoriaSeleccionada) {
         if (categoriaSeleccionada == "Todos") listaProductos
-        else listaProductos.filter { it.categoria.trim() == categoriaSeleccionada }
+        else listaProductos.filter { it.categoriaProducto.trim() == categoriaSeleccionada }
     }
 
     Scaffold(
@@ -80,11 +95,14 @@ fun PantallaProductos(nav: NavController) {
                 .padding(padding)
         ) {
             if (listaProductos.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text("No hay productos disponibles", color = Color.White)
                 }
             } else {
-                // ---------- Selector desplegable de categoría ----------
+                // Selector desplegable de categorías
                 ExposedDropdownMenuBox(
                     expanded = expanded,
                     onExpandedChange = { expanded = !expanded },
@@ -109,7 +127,6 @@ fun PantallaProductos(nav: NavController) {
                             .menuAnchor()
                             .fillMaxWidth()
                     )
-
                     ExposedDropdownMenu(
                         expanded = expanded,
                         onDismissRequest = { expanded = false }
@@ -128,7 +145,7 @@ fun PantallaProductos(nav: NavController) {
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // subtítulo
+                // Subtítulo con la categoría seleccionada
                 Text(
                     text = if (categoriaSeleccionada == "Todos") "Nuestros productos"
                     else "Categoría: $categoriaSeleccionada",
@@ -137,7 +154,7 @@ fun PantallaProductos(nav: NavController) {
                     modifier = Modifier.padding(start = 16.dp, bottom = 12.dp)
                 )
 
-                // grilla de productos
+                // Grilla de productos
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
                     contentPadding = PaddingValues(8.dp),
@@ -147,7 +164,13 @@ fun PantallaProductos(nav: NavController) {
                     items(productosFiltrados) { producto ->
                         ProductoCard(
                             producto = producto,
-                            onClick = { nav.navigate("producto/${producto.id}") }
+                            onClick = {
+                                // Navegamos utilizando el id remoto del producto si existe. Si el id es nulo
+                                // no navegamos a una pantalla de detalle específica.
+                                producto.id?.let { id ->
+                                    nav.navigate("producto/$id")
+                                }
+                            }
                         )
                     }
                 }
@@ -157,13 +180,15 @@ fun PantallaProductos(nav: NavController) {
 }
 
 /**
- * 🔹 Tarjeta de producto con botón para añadir al carrito.
+ * Tarjeta individual de un producto remoto. Incluye un botón para añadir al
+ * carrito. Utiliza el identificador remoto del producto para enviar
+ * correctamente el pedido al backend.
  */
 @Composable
-fun ProductoCard(producto: ProductosEntity, onClick: () -> Unit) {
+fun ProductoCard(producto: ProductoDTO, onClick: () -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val dao = AppDatabase.obtenerBaseDatos(context).carritoDao()
-    val repo = CarritoRepository(dao)
+    val carritoDao = AppDatabase.obtenerBaseDatos(context).carritoDao()
+    val repo = CarritoRepository(carritoDao)
     val carritoVM: CarritoViewModel = viewModel(factory = CarritoViewModelFactory(repo))
 
     Card(
@@ -182,29 +207,38 @@ fun ProductoCard(producto: ProductosEntity, onClick: () -> Unit) {
         ) {
             Image(
                 painter = rememberAsyncImagePainter(producto.imagenUrl),
-                contentDescription = producto.nombre,
+                contentDescription = producto.nombreProducto,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(120.dp),
                 contentScale = ContentScale.Crop
             )
-
             Spacer(modifier = Modifier.height(8.dp))
-            Text(producto.nombre, color = Color(0xFF39FF14), fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            Text("$${producto.precio}", color = Color(0xFF1E90FF), fontSize = 12.sp)
-
+            Text(
+                producto.nombreProducto,
+                color = Color(0xFF39FF14),
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp
+            )
+            Text(
+                "$${producto.precioProducto}",
+                color = Color(0xFF1E90FF),
+                fontSize = 12.sp
+            )
             Button(
                 onClick = {
+                    // El ID remoto nunca debería ser nulo al listar productos. Si lo fuera, usamos 0.
+                    val idParaCarrito = producto.id ?: 0L
                     carritoVM.agregarProductoAlCarrito(
-                        idProducto = producto.id.toLong(),      // 👈 ID real de ProductosEntity
-                        nombre = producto.nombre,
-                        precio = producto.precio,
+                        idProducto = idParaCarrito,
+                        nombre = producto.nombreProducto,
+                        precio = producto.precioProducto,
                         imagenUrl = producto.imagenUrl
                     )
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF39FF14))
             ) {
-                Text("🛒 Agregar al carrito", color = Color.Black, fontWeight = FontWeight.Bold)
+                Text("Agregar al carrito", color = Color.Black, fontWeight = FontWeight.Bold)
             }
         }
     }

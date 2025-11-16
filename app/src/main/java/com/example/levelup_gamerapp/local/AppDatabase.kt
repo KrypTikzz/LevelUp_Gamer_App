@@ -4,20 +4,26 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import com.example.levelup_gamerapp.local.RegistroUsuarioEntity
-import com.example.levelup_gamerapp.local.RegistroUsuarioDAO
 
+/**
+ * Implementación de la base de datos de Room para la aplicación.
+ *
+ * Se incluye la entidad [ProductosEntity] con un nuevo campo `remoteId`. Para
+ * reflejar este cambio en el esquema se incrementa la versión a 4 y se
+ * aplica una migración destructiva mediante `fallbackToDestructiveMigration()`.
+ * Si en un entorno real se desea preservar la información, se debería
+ * implementar una migración adecuada.
+ */
 @Database(
     entities = [
         ProductosEntity::class,
         CarritoEntity::class,
-        RegistroUsuarioEntity::class // 🔹 Añadimos el registro de usuarios
+        RegistroUsuarioEntity::class // Añadimos el registro de usuarios
     ],
-    version = 3, // 🔹 Subimos la versión para forzar recreación
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
-
     abstract fun productosDao(): ProductosDao
     abstract fun carritoDao(): CarritoDao
     abstract fun registroUsuarioDao(): RegistroUsuarioDAO
@@ -46,6 +52,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "levelup_db"
                 )
+                    // Se elimina y recrea la base de datos si el esquema cambia
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
