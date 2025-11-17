@@ -29,15 +29,14 @@ Endpoints de productos
 
 Endpoints de categorías
 
-| Ruta                              | Método     | Descripción                                                                     |
-| --------------------------------- | ---------- | ------------------------------------------------------------------------------- |
-| `/api/usuarios`                   | **GET**    | Devuelve la lista de todos los usuarios.                                        |
-| `/api/usuarios/{id}`              | **GET**    | Devuelve un usuario por su ID.                                                  |
-| `/api/usuarios`                   | **POST**   | Crea un nuevo usuario (requiere los datos de usuario en el cuerpo).             |
-| `/api/usuarios/{id}`              | **PUT**    | Actualiza un usuario existente.                                                 |
-| `/api/usuarios/{id}`              | **DELETE** | Elimina un usuario por su ID.                                                   |
-| `/api/usuarios/buscar?correo=...` | **GET**    | Busca un usuario por su correo electrónico.                                     |
-| `/api/usuarios/login`             | **POST**   | Inicia sesión; recibe el correo y la contraseña como parámetros de la petición. |
+| Ruta                   | Método     | Descripción                                               |
+| ---------------------- | ---------- | --------------------------------------------------------- |
+| `/api/categorias`      | **GET**    | Obtiene la lista completa de categorías.                  |
+| `/api/categorias/{id}` | **GET**    | Devuelve los detalles de una categoría por ID.            |
+| `/api/categorias`      | **POST**   | Crea una nueva categoría.                                 |
+| `/api/categorias/{id}` | **PUT**    | Actualiza una categoría existente (nombre y descripción). |
+| `/api/categorias/{id}` | **DELETE** | Elimina una categoría por ID.                             |
+
 
 Endpoints de usuarios
 
