@@ -172,7 +172,10 @@ fun PantallaProductos(nav: NavController) {
                     Spacer(modifier = Modifier.height(8.dp))
                     // Subtítulo
                     Text(
-                        text = if (categoriaSeleccionada == "Todos") "Nuestros productos" else "Categoría: ${'$'}categoriaSeleccionada",
+                        text = if (categoriaSeleccionada == "Todos")
+                            "Nuestros productos"
+                        else
+                            "Categoría: $categoriaSeleccionada",
                         fontSize = 16.sp,
                         color = Color(0xFF1E90FF),
                         modifier = Modifier.padding(start = 16.dp, bottom = 12.dp)
@@ -186,8 +189,10 @@ fun PantallaProductos(nav: NavController) {
                     ) {
                         items(productosFiltrados) { producto ->
                             ProductoCard(producto = producto) {
-                                // Navegamos al detalle pasando el id del producto
-                                nav.navigate("producto/${'$'}{producto.id}")
+                                // ✅ Navegamos al detalle pasando el id numérico real
+                                producto.id?.let { id ->
+                                    nav.navigate("producto/$id")
+                                }
                             }
                         }
                     }
@@ -207,6 +212,7 @@ fun ProductoCard(producto: ProductoDTO, onClick: () -> Unit) {
     val db = AppDatabase.obtenerBaseDatos(context)
     val cRepo = remember { CarritoRepository(db.carritoDao()) }
     val carritoVM: CarritoViewModel = viewModel(factory = CarritoViewModelFactory(cRepo))
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -237,8 +243,7 @@ fun ProductoCard(producto: ProductoDTO, onClick: () -> Unit) {
                 fontSize = 14.sp
             )
             Text(
-                // Formateamos el precio con símbolo de dólar y dos decimales
-                text = "${'$'}${"%.2f".format(producto.precioProducto)}",
+                text = "$${"%.2f".format(producto.precioProducto)}",
                 color = Color(0xFF1E90FF),
                 fontSize = 12.sp
             )

@@ -3,6 +3,7 @@ package com.example.levelup_gamerapp.repository
 import com.example.levelup_gamerapp.remote.ApiClient
 import com.example.levelup_gamerapp.remote.UsuarioDTO
 import retrofit2.Response
+import retrofit2.HttpException
 
 /**
  * Repositorio remoto para la gestión de usuarios.
@@ -51,7 +52,17 @@ class RemoteUsuariosRepository {
 
     /** Busca un usuario por su correo electrónico. Devuelve null si no se encuentra. */
     suspend fun buscarPorCorreo(correo: String): UsuarioDTO? {
-        return api.buscarUsuarioPorCorreo(correo)
+        return try {
+            api.buscarUsuarioPorCorreo(correo)
+        } catch (e: HttpException) {
+            // Si el backend responde 404 (no encontrado), lo interpretamos como "no existe usuario"
+            if (e.code() == 404) {
+                null
+            } else {
+                // Otros códigos (500, 400, etc.) los volvemos a lanzar para no ocultar errores graves
+                throw e
+            }
+        }
     }
 
     /** Realiza el inicio de sesión. Devuelve el usuario autenticado o null si las credenciales no son válidas. */

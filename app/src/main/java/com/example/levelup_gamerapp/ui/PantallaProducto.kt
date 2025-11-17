@@ -143,7 +143,7 @@ fun PantallaProducto(
                 ) {
                     // Imagen del producto
                     Image(
-                        painter = rememberAsyncImagePainter(p!!.imagenUrl),
+                        painter = rememberAsyncImagePainter(p.imagenUrl),
                         contentDescription = p.nombreProducto,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -161,9 +161,16 @@ fun PantallaProducto(
                     Spacer(modifier = Modifier.height(8.dp))
                     // Precio
                     Text(
-                        text = "Precio: ${'$'}${"%.2f".format(p.precioProducto)}",
+                        text = "Precio: $${"%.2f".format(p.precioProducto)}",
                         color = Color(0xFF1E90FF),
                         style = MaterialTheme.typography.titleMedium
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    // 🔹 Stock disponible
+                    Text(
+                        text = "Stock disponible: ${p.cantidadDisponible}",
+                        color = Color(0xFF39FF14),
+                        style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     // Descripción

@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -12,7 +13,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.levelup_gamerapp.local.AppDatabase
 import com.example.levelup_gamerapp.repository.RegistroUsuarioRepository
 import com.example.levelup_gamerapp.viewmodel.RegistroUsuarioViewModel
 import com.example.levelup_gamerapp.viewmodel.RegistroUsuarioViewModelFactory
@@ -23,10 +23,12 @@ fun RegistroUsuarioScreen(
     navController: NavController
 ) {
     val app = LocalContext.current.applicationContext as Application
-    // Utilizamos getDatabase para una nomenclatura consistente
-    val dao = AppDatabase.getDatabase(app).registroUsuarioDao()
-    val repo = RegistroUsuarioRepository(dao)
-    val vm: RegistroUsuarioViewModel = viewModel(factory = RegistroUsuarioViewModelFactory(repo))
+
+    // 🔁 Ahora el repositorio no usa DAO ni Room; es remoto.
+    val repo = remember { RegistroUsuarioRepository() }
+
+    val vm: RegistroUsuarioViewModel =
+        viewModel(factory = RegistroUsuarioViewModelFactory(repo))
 
     Scaffold(
         topBar = {
@@ -52,11 +54,10 @@ fun RegistroUsuarioScreen(
                     .padding(24.dp),
                 color = MaterialTheme.colorScheme.background
             ) {
+                // 👇 Aquí sigue todoo igual: cámara, campos, etc.
                 FormScreen(
                     vm = vm,
                     onSaved = {
-                        // Si el registro es exitoso, volvemos a la pantalla de login y
-                        // eliminamos la pantalla de registro de la pila
                         navController.navigate("login") {
                             popUpTo("registro") { inclusive = true }
                         }
