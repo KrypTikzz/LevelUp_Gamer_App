@@ -9,7 +9,7 @@ import retrofit2.Response
  * Se apoya en [LevelUpApi] proporcionado por [ApiClient] para realizar las
  * peticiones HTTP.
  */
-class RemoteProductosRepository {
+open class RemoteProductosRepository {
     private val api = ApiClient.api
 
     /**

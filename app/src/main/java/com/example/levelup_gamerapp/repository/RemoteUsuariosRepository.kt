@@ -9,7 +9,7 @@ import retrofit2.HttpException
  * Repositorio remoto para la gestión de usuarios.
  * Ofrece operaciones CRUD completas contra las rutas expuestas en el backend.
  */
-class RemoteUsuariosRepository {
+open class RemoteUsuariosRepository {
     private val api = ApiClient.api
 
     /** Obtiene todos los usuarios almacenados en el backend. */

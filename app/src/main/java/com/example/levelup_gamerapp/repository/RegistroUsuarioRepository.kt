@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.flow
  * [RemoteUsuariosRepository], pero mantiene las mismas firmas públicas
  * que usaba el ViewModel cuando trabajaba con Room.
  */
-class RegistroUsuarioRepository(
+open class RegistroUsuarioRepository(
     private val remote: RemoteUsuariosRepository = RemoteUsuariosRepository()
 ) {
 

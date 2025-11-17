@@ -8,7 +8,7 @@ import com.example.levelup_gamerapp.remote.CategoriaDTO
  * repositorio ofrece métodos para obtener la lista completa de categorías,
  * crear nuevas, actualizarlas y eliminarlas a través de la API REST.
  */
-class RemoteCategoriasRepository {
+open class RemoteCategoriasRepository {
     private val api = ApiClient.api
 
     /**
