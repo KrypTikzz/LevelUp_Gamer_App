@@ -24,6 +24,7 @@ import com.example.levelup_gamerapp.remote.ItemPedidoRequest
 import com.example.levelup_gamerapp.repository.CarritoRepository
 import com.example.levelup_gamerapp.viewmodel.CarritoViewModel
 import com.example.levelup_gamerapp.viewmodel.CarritoViewModelFactory
+import com.example.levelup_gamerapp.viewmodel.SesionViewModel
 import kotlinx.coroutines.launch
 
 /**
@@ -44,6 +45,10 @@ fun PantallaCarrito() {
     val carritoDao = db.carritoDao()
     val repo = CarritoRepository(carritoDao)
     val carritoVM: CarritoViewModel = viewModel(factory = CarritoViewModelFactory(repo))
+
+    // ViewModel de sesión para obtener el usuario actualmente logueado
+    val sesionViewModel: SesionViewModel = viewModel()
+    val usuarioActual by sesionViewModel.usuarioActual.collectAsState()
 
     // No necesitamos el DAO de productos en esta versión porque el stock se gestiona en el backend
     // val productosDao = db.productosDao()
@@ -156,6 +161,13 @@ fun PantallaCarrito() {
                                         return@launch
                                     }
 
+                                    // Comprobamos que haya un usuario logueado
+                                    val usuarioId = usuarioActual?.id
+                                    if (usuarioId == null) {
+                                        snackbarHostState.showSnackbar("Debes iniciar sesión para comprar")
+                                        return@launch
+                                    }
+
                                     // Construir DTO para el backend
                                     val itemsDto = carritoAgrupado.map { item ->
                                         ItemPedidoRequest(
@@ -163,10 +175,6 @@ fun PantallaCarrito() {
                                             cantidad = item.cantidad
                                         )
                                     }
-
-                                    // Usuario fijo de ejemplo; en un entorno real este valor
-                                    // debería provenir de la sesión de usuario
-                                    val usuarioId = 1L
 
                                     val request = CrearPedidoRequest(
                                         usuarioId = usuarioId,
