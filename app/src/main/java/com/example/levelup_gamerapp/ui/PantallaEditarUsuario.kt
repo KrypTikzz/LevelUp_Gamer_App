@@ -1,179 +1,190 @@
 package com.example.levelup_gamerapp.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.levelup_gamerapp.remote.UsuarioDTO
 import com.example.levelup_gamerapp.repository.RemoteUsuariosRepository
 import kotlinx.coroutines.launch
 
-/**
- * Pantalla para crear o editar un usuario desde el backend.
- * Si el parámetro [id] es 0 se considera creación, en caso contrario se
- * cargan los datos del usuario existente para su edición. Las operaciones se
- * realizan a través de [RemoteUsuariosRepository].
- */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PantallaEditarUsuario(navController: NavController, id: Int) {
+fun PantallaEditarUsuario(
+    navController: NavController,
+    id: Int
+) {
+    val context = LocalContext.current
     val repo = remember { RemoteUsuariosRepository() }
     val scope = rememberCoroutineScope()
+
     var cargando by remember { mutableStateOf(true) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
-    var usuarioRemoto by remember { mutableStateOf<UsuarioDTO?>(null) }
 
-    // Estados de formulario
     var nombre by remember { mutableStateOf("") }
     var apellido by remember { mutableStateOf("") }
     var correo by remember { mutableStateOf("") }
     var contrasena by remember { mutableStateOf("") }
     var edad by remember { mutableStateOf("") }
-    var admin by remember { mutableStateOf(false) }
+    var esAdmin by remember { mutableStateOf(false) }
 
-    // Cargar usuario existente si aplica
+    // Cargar datos del usuario al entrar
     LaunchedEffect(id) {
-        if (id != 0) {
-            try {
-                val usuario = repo.obtenerUsuario(id.toLong())
-                usuarioRemoto = usuario
-                nombre = usuario.nombre
-                apellido = usuario.apellido
-                correo = usuario.correo
-                contrasena = usuario.contrasena
-                edad = usuario.edad.toString()
-                admin = usuario.admin
-                errorMsg = null
-            } catch (e: Exception) {
-                errorMsg = e.localizedMessage
-            } finally {
-                cargando = false
-            }
-        } else {
+        try {
+            val usuario = repo.obtenerUsuario(id.toLong())
+            nombre = usuario.nombre
+            apellido = usuario.apellido
+            correo = usuario.correo
+            contrasena = usuario.contrasena
+            edad = usuario.edad.toString()
+            esAdmin = usuario.admin
+            errorMsg = null
+        } catch (e: Exception) {
+            errorMsg = e.localizedMessage ?: "Error al cargar usuario"
+        } finally {
             cargando = false
         }
     }
 
-    // UI
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        Text(
-            text = if (id == 0) "Crear Usuario" else "Editar Usuario",
-            style = MaterialTheme.typography.headlineMedium
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        // Campos de entrada
-        OutlinedTextField(
-            value = nombre,
-            onValueChange = { nombre = it },
-            label = { Text("Nombre") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = apellido,
-            onValueChange = { apellido = it },
-            label = { Text("Apellido") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = correo,
-            onValueChange = { correo = it },
-            label = { Text("Correo") },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = id == 0
-        )
-        OutlinedTextField(
-            value = contrasena,
-            onValueChange = { contrasena = it },
-            label = { Text("Contraseña") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-        OutlinedTextField(
-            value = edad,
-            onValueChange = { edad = it },
-            label = { Text("Edad") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        // Botón Guardar
-        Button(
-            onClick = {
-                val edadInt = edad.toIntOrNull() ?: 0
-                if (nombre.isNotBlank() && apellido.isNotBlank() && correo.isNotBlank() && contrasena.isNotBlank()) {
-                    val dto = UsuarioDTO(
-                        id = if (id == 0) null else id.toLong(),
-                        nombre = nombre.trim(),
-                        apellido = apellido.trim(),
-                        correo = correo.trim(),
-                        contrasena = contrasena,
-                        edad = edadInt,
-                        admin = admin
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "Editar usuario",
+                        color = Color(0xFF39FF14),
+                        fontSize = 20.sp
                     )
-                    scope.launch {
-                        try {
-                            if (id == 0) {
-                                repo.crearUsuario(dto)
-                            } else {
-                                repo.actualizarUsuario(id.toLong(), dto)
-                            }
-                            navController.popBackStack()
-                        } catch (e: Exception) {
-                            errorMsg = e.localizedMessage
+                },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            imageVector = Icons.Filled.ArrowBack,
+                            contentDescription = "Volver",
+                            tint = Color(0xFF39FF14)
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Black
+                )
+            )
+        },
+        containerColor = Color.Black
+    ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .background(Color.Black)
+        ) {
+            when {
+                cargando -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center),
+                        color = Color(0xFF39FF14)
+                    )
+                }
+                errorMsg != null -> {
+                    Text(
+                        text = errorMsg ?: "Error desconocido",
+                        color = Color.White,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+                else -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.Top
+                    ) {
+                        OutlinedTextField(
+                            value = nombre,
+                            onValueChange = { nombre = it },
+                            label = { Text("Nombre") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = apellido,
+                            onValueChange = { apellido = it },
+                            label = { Text("Apellido") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = correo,
+                            onValueChange = { correo = it },
+                            label = { Text("Correo") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = contrasena,
+                            onValueChange = { contrasena = it },
+                            label = { Text("Contraseña") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = edad,
+                            onValueChange = { edad = it },
+                            label = { Text("Edad") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = esAdmin,
+                                onCheckedChange = { esAdmin = it }
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Es administrador", color = Color.White)
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Button(
+                            onClick = {
+                                val edadInt = edad.toIntOrNull()
+                                if (nombre.isNotBlank() && apellido.isNotBlank() &&
+                                    correo.isNotBlank() && contrasena.isNotBlank() &&
+                                    edadInt != null
+                                ) {
+                                    val actualizado = UsuarioDTO(
+                                        id = id.toLong(),
+                                        nombre = nombre.trim(),
+                                        apellido = apellido.trim(),
+                                        correo = correo.trim(),
+                                        contrasena = contrasena,
+                                        edad = edadInt,
+                                        admin = esAdmin
+                                    )
+                                    scope.launch {
+                                        try {
+                                            repo.actualizarUsuario(id.toLong(), actualizado)
+                                            navController.popBackStack()
+                                        } catch (e: Exception) {
+                                            errorMsg = "Error al guardar cambios"
+                                        }
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Guardar cambios")
                         }
                     }
                 }
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Guardar")
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        // Botón Eliminar (solo si el usuario existe y no es admin principal)
-        if (id != 0 && usuarioRemoto != null && usuarioRemoto!!.correo != "admin@levelupgamer.cl") {
-            Button(
-                onClick = {
-                    scope.launch {
-                        try {
-                            repo.eliminarUsuario(id.toLong())
-                            navController.popBackStack()
-                        } catch (e: Exception) {
-                            errorMsg = e.localizedMessage
-                        }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-            ) {
-                Text("Eliminar")
             }
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-        // Botón Cancelar
-        TextButton(
-            onClick = { navController.popBackStack() },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Cancelar")
-        }
-        // Mostrar mensaje de error si corresponde
-        errorMsg?.let { msg ->
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = msg,
-                color = MaterialTheme.colorScheme.error
-            )
         }
     }
 }

@@ -37,6 +37,14 @@ class UsuariosViewModel(private val repository: RemoteUsuariosRepository) : View
             cargarUsuarios()
         }
     }
+
+    /** Elimina un usuario en el backend y recarga la lista. */
+    fun eliminarUsuario(id: Long) {
+        viewModelScope.launch {
+            repository.eliminarUsuario(id)
+            cargarUsuarios()
+        }
+    }
 }
 
 /**

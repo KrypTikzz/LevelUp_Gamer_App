@@ -14,6 +14,8 @@ import androidx.navigation.NavController
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import com.example.levelup_gamerapp.remote.CategoriaDTO
 import com.example.levelup_gamerapp.remote.ProductoDTO
 import com.example.levelup_gamerapp.remote.UsuarioDTO
@@ -83,10 +85,11 @@ fun PantallaAdmin(navController: NavController) {
     var edadUsuario by remember { mutableStateOf("") }
     var adminUsuario by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier
-        .fillMaxSize()
-        .padding(16.dp)
-        .imePadding()
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .imePadding()
     ) {
         Text("Panel Administrador", style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(8.dp))
@@ -116,112 +119,125 @@ fun PantallaAdmin(navController: NavController) {
             // === TAB PRODUCTOS ===
             0 -> {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    // Formulario de creación de productos
-                    Text("Nuevo producto", style = MaterialTheme.typography.titleMedium)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = nombreProducto,
-                        onValueChange = { nombreProducto = it },
-                        label = { Text("Nombre del producto") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = descripcionProducto,
-                        onValueChange = { descripcionProducto = it },
-                        label = { Text("Descripción") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = precioProducto,
-                        onValueChange = { precioProducto = it },
-                        label = { Text("Precio") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = imagenUrl,
-                        onValueChange = { imagenUrl = it },
-                        label = { Text("URL de imagen") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = stockProducto,
-                        onValueChange = { stockProducto = it },
-                        label = { Text("Stock disponible") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    // Selección de categoría para el producto
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Categoría", style = MaterialTheme.typography.bodyLarge)
-                    if (categorias.isEmpty()) {
-                        Text("(No hay categorías disponibles)", style = MaterialTheme.typography.bodySmall)
-                    } else {
-                        // Mostramos un menú desplegable con las categorías existentes. El primer
-                        // elemento es seleccionado por defecto y se controla con el índice.
-                        var expandedCat by remember { mutableStateOf(false) }
-                        val categoriaSeleccionada = categorias.getOrNull(categoriaProductoIndex)
-                        Box {
-                            OutlinedTextField(
-                                value = categoriaSeleccionada?.nombreCategoria ?: "",
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text("Seleccione categoría") },
-                                trailingIcon = {
-                                    IconButton(onClick = { expandedCat = !expandedCat }) {
-                                        Icon(
-                                            imageVector = Icons.Filled.ArrowDropDown,
-                                            contentDescription = "Categorías"
+
+                    // 🔹 Formulario de creación de productos (mitad superior, con scroll)
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        // Formulario de creación de productos
+                        Text("Nuevo producto", style = MaterialTheme.typography.titleMedium)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = nombreProducto,
+                            onValueChange = { nombreProducto = it },
+                            label = { Text("Nombre del producto") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = descripcionProducto,
+                            onValueChange = { descripcionProducto = it },
+                            label = { Text("Descripción") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = precioProducto,
+                            onValueChange = { precioProducto = it },
+                            label = { Text("Precio") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = imagenUrl,
+                            onValueChange = { imagenUrl = it },
+                            label = { Text("URL de imagen") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = stockProducto,
+                            onValueChange = { stockProducto = it },
+                            label = { Text("Stock disponible") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        // Selección de categoría para el producto
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Categoría", style = MaterialTheme.typography.bodyLarge)
+                        if (categorias.isEmpty()) {
+                            Text(
+                                "(No hay categorías disponibles)",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        } else {
+                            // Mostramos un menú desplegable con las categorías existentes. El primer
+                            // elemento es seleccionado por defecto y se controla con el índice.
+                            var expandedCat by remember { mutableStateOf(false) }
+                            val categoriaSeleccionada = categorias.getOrNull(categoriaProductoIndex)
+                            Box {
+                                OutlinedTextField(
+                                    value = categoriaSeleccionada?.nombreCategoria ?: "",
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("Seleccione categoría") },
+                                    trailingIcon = {
+                                        IconButton(onClick = { expandedCat = !expandedCat }) {
+                                            Icon(
+                                                imageVector = Icons.Filled.ArrowDropDown,
+                                                contentDescription = "Categorías"
+                                            )
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                DropdownMenu(
+                                    expanded = expandedCat,
+                                    onDismissRequest = { expandedCat = false },
+                                    modifier = Modifier.fillMaxWidth(0.9f)
+                                ) {
+                                    categorias.forEachIndexed { index, cat ->
+                                        DropdownMenuItem(
+                                            text = { Text(cat.nombreCategoria) },
+                                            onClick = {
+                                                categoriaProductoIndex = index
+                                                expandedCat = false
+                                            }
                                         )
                                     }
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            DropdownMenu(
-                                expanded = expandedCat,
-                                onDismissRequest = { expandedCat = false },
-                                modifier = Modifier.fillMaxWidth(0.9f)
-                            ) {
-                                categorias.forEachIndexed { index, cat ->
-                                    DropdownMenuItem(
-                                        text = { Text(cat.nombreCategoria) },
-                                        onClick = {
-                                            categoriaProductoIndex = index
-                                            expandedCat = false
-                                        }
-                                    )
                                 }
                             }
                         }
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(
-                        onClick = {
-                            val precio = precioProducto.toDoubleOrNull()
-                            val stock = stockProducto.toIntOrNull()
-                            val categoria = categorias.getOrNull(categoriaProductoIndex)
-                            if (nombreProducto.isNotBlank() && descripcionProducto.isNotBlank() &&
-                                precio != null && stock != null && categoria != null) {
-                                val nuevoProd = ProductoDTO(
-                                    nombreProducto = nombreProducto.trim(),
-                                    descripcionProducto = descripcionProducto.trim(),
-                                    precioProducto = precio,
-                                    imagenUrl = imagenUrl.ifBlank { "https://via.placeholder.com/300" },
-                                    cantidadDisponible = stock,
-                                    categoriaId = categoria.id ?: 0L,
-                                    categoriaProducto = categoria.nombreCategoria
-                                )
-                                productosVM.agregarProducto(nuevoProd)
-                                // Limpiar campos del formulario
-                                nombreProducto = ""
-                                descripcionProducto = ""
-                                precioProducto = ""
-                                imagenUrl = ""
-                                stockProducto = ""
-                                categoriaProductoIndex = 0
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Agregar producto")
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = {
+                                val precio = precioProducto.toDoubleOrNull()
+                                val stock = stockProducto.toIntOrNull()
+                                val categoria = categorias.getOrNull(categoriaProductoIndex)
+                                if (nombreProducto.isNotBlank() && descripcionProducto.isNotBlank() &&
+                                    precio != null && stock != null && categoria != null
+                                ) {
+                                    val nuevoProd = ProductoDTO(
+                                        nombreProducto = nombreProducto.trim(),
+                                        descripcionProducto = descripcionProducto.trim(),
+                                        precioProducto = precio,
+                                        imagenUrl = imagenUrl.ifBlank { "https://via.placeholder.com/300" },
+                                        cantidadDisponible = stock,
+                                        categoriaId = categoria.id ?: 0L,
+                                        categoriaProducto = categoria.nombreCategoria
+                                    )
+                                    productosVM.agregarProducto(nuevoProd)
+                                    // Limpiar campos del formulario
+                                    nombreProducto = ""
+                                    descripcionProducto = ""
+                                    precioProducto = ""
+                                    imagenUrl = ""
+                                    stockProducto = ""
+                                    categoriaProductoIndex = 0
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Agregar producto")
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -230,13 +246,17 @@ fun PantallaAdmin(navController: NavController) {
 
                     Text("Productos actuales", style = MaterialTheme.typography.titleMedium)
                     Spacer(modifier = Modifier.height(8.dp))
-                    LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
+
+                    // 🔹 Lista de productos (mitad inferior)
+                    LazyColumn(modifier = Modifier.weight(1f)) {
                         items(productos) { prod ->
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 4.dp),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                )
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -245,15 +265,38 @@ fun PantallaAdmin(navController: NavController) {
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(prod.nombreProducto, style = MaterialTheme.typography.bodyLarge)
-                                        Text("$${prod.precioProducto}", style = MaterialTheme.typography.bodyMedium)
+                                        Text(
+                                            prod.nombreProducto,
+                                            style = MaterialTheme.typography.bodyLarge
+                                        )
+                                        Text(
+                                            "$${prod.precioProducto}",
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
                                         Text("Stock: ${prod.cantidadDisponible}")
                                         Text("Categoría: ${prod.categoriaProducto}")
                                     }
-                                    TextButton(onClick = {
-                                        prod.id?.let { id -> productosVM.eliminarProducto(id) }
-                                    }) {
-                                        Text("Eliminar")
+                                    // Botones de acción: Editar y Eliminar
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        TextButton(
+                                            onClick = {
+                                                prod.id?.let { id ->
+                                                    // Navegamos a la pantalla de edición de producto
+                                                    navController.navigate("editar_producto/$id")
+                                                }
+                                            }
+                                        ) {
+                                            Text("Editar")
+                                        }
+                                        TextButton(
+                                            onClick = {
+                                                prod.id?.let { id ->
+                                                    productosVM.eliminarProducto(id)
+                                                }
+                                            }
+                                        ) {
+                                            Text("Eliminar")
+                                        }
                                     }
                                 }
                             }
@@ -261,39 +304,49 @@ fun PantallaAdmin(navController: NavController) {
                     }
                 }
             }
+
             // === TAB CATEGORÍAS ===
             1 -> {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    Text("Nueva categoría", style = MaterialTheme.typography.titleMedium)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = nombreCategoria,
-                        onValueChange = { nombreCategoria = it },
-                        label = { Text("Nombre de la categoría") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = descripcionCategoria,
-                        onValueChange = { descripcionCategoria = it },
-                        label = { Text("Descripción") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(
-                        onClick = {
-                            if (nombreCategoria.isNotBlank()) {
-                                val nuevaCat = CategoriaDTO(
-                                    nombreCategoria = nombreCategoria.trim(),
-                                    descripcionCategoria = descripcionCategoria.trim()
-                                )
-                                categoriasVM.crearCategoria(nuevaCat)
-                                nombreCategoria = ""
-                                descripcionCategoria = ""
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
+
+                    // 🔹 Formulario de categorías (mitad superior)
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
                     ) {
-                        Text("Agregar categoría")
+                        Text("Nueva categoría", style = MaterialTheme.typography.titleMedium)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = nombreCategoria,
+                            onValueChange = { nombreCategoria = it },
+                            label = { Text("Nombre de la categoría") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = descripcionCategoria,
+                            onValueChange = { descripcionCategoria = it },
+                            label = { Text("Descripción") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = {
+                                if (nombreCategoria.isNotBlank()) {
+                                    val nuevaCat = CategoriaDTO(
+                                        nombreCategoria = nombreCategoria.trim(),
+                                        descripcionCategoria = descripcionCategoria.trim()
+                                    )
+                                    categoriasVM.crearCategoria(nuevaCat)
+                                    nombreCategoria = ""
+                                    descripcionCategoria = ""
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Agregar categoría")
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -302,13 +355,17 @@ fun PantallaAdmin(navController: NavController) {
 
                     Text("Categorías actuales", style = MaterialTheme.typography.titleMedium)
                     Spacer(modifier = Modifier.height(8.dp))
-                    LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
+
+                    // 🔹 Lista de categorías (mitad inferior)
+                    LazyColumn(modifier = Modifier.weight(1f)) {
                         items(categorias) { cat ->
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 4.dp),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                )
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -317,101 +374,125 @@ fun PantallaAdmin(navController: NavController) {
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(cat.nombreCategoria, style = MaterialTheme.typography.bodyLarge)
-                                        Text(cat.descripcionCategoria, style = MaterialTheme.typography.bodyMedium)
+                                        Text(
+                                            cat.nombreCategoria,
+                                            style = MaterialTheme.typography.bodyLarge
+                                        )
+                                        Text(
+                                            cat.descripcionCategoria,
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
                                         Text("ID: ${cat.id ?: "-"}")
                                     }
+                                    // Aquí podrías añadir Editar/Eliminar si más adelante
+                                    // creas pantallas o lógica para gestionar categorías.
                                 }
                             }
                         }
                     }
                 }
             }
+
             // === TAB USUARIOS ===
             2 -> {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    Text("Nuevo usuario", style = MaterialTheme.typography.titleMedium)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = nombreUsuario,
-                        onValueChange = { nombreUsuario = it },
-                        label = { Text("Nombre") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = apellidoUsuario,
-                        onValueChange = { apellidoUsuario = it },
-                        label = { Text("Apellido") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = correoUsuario,
-                        onValueChange = { correoUsuario = it },
-                        label = { Text("Correo") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = contrasenaUsuario,
-                        onValueChange = { contrasenaUsuario = it },
-                        label = { Text("Contraseña") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = edadUsuario,
-                        onValueChange = { edadUsuario = it },
-                        label = { Text("Edad") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    // Selección de rol de administrador (checkbox)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(
-                            checked = adminUsuario,
-                            onCheckedChange = { adminUsuario = it }
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Es administrador")
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(
-                        onClick = {
-                            val edadInt = edadUsuario.toIntOrNull()
-                            if (nombreUsuario.isNotBlank() && apellidoUsuario.isNotBlank() &&
-                                correoUsuario.isNotBlank() && contrasenaUsuario.isNotBlank() && edadInt != null) {
-                                val nuevoUsuario = UsuarioDTO(
-                                    nombre = nombreUsuario.trim(),
-                                    apellido = apellidoUsuario.trim(),
-                                    correo = correoUsuario.trim(),
-                                    contrasena = contrasenaUsuario,
-                                    edad = edadInt,
-                                    admin = adminUsuario
-                                )
-                                usuariosVM.crearUsuario(nuevoUsuario)
-                                // Limpiar campos
-                                nombreUsuario = ""
-                                apellidoUsuario = ""
-                                correoUsuario = ""
-                                contrasenaUsuario = ""
-                                edadUsuario = ""
-                                adminUsuario = false
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
+
+                    // 🔹 Formulario de usuarios (mitad superior)
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
                     ) {
-                        Text("Agregar usuario")
+                        Text("Nuevo usuario", style = MaterialTheme.typography.titleMedium)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = nombreUsuario,
+                            onValueChange = { nombreUsuario = it },
+                            label = { Text("Nombre") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = apellidoUsuario,
+                            onValueChange = { apellidoUsuario = it },
+                            label = { Text("Apellido") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = correoUsuario,
+                            onValueChange = { correoUsuario = it },
+                            label = { Text("Correo") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = contrasenaUsuario,
+                            onValueChange = { contrasenaUsuario = it },
+                            label = { Text("Contraseña") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = edadUsuario,
+                            onValueChange = { edadUsuario = it },
+                            label = { Text("Edad") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        // Selección de rol de administrador (checkbox)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = adminUsuario,
+                                onCheckedChange = { adminUsuario = it }
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Es administrador")
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = {
+                                val edadInt = edadUsuario.toIntOrNull()
+                                if (nombreUsuario.isNotBlank() && apellidoUsuario.isNotBlank() &&
+                                    correoUsuario.isNotBlank() && contrasenaUsuario.isNotBlank() && edadInt != null
+                                ) {
+                                    val nuevoUsuario = UsuarioDTO(
+                                        nombre = nombreUsuario.trim(),
+                                        apellido = apellidoUsuario.trim(),
+                                        correo = correoUsuario.trim(),
+                                        contrasena = contrasenaUsuario,
+                                        edad = edadInt,
+                                        admin = adminUsuario
+                                    )
+                                    usuariosVM.crearUsuario(nuevoUsuario)
+                                    // Limpiar campos
+                                    nombreUsuario = ""
+                                    apellidoUsuario = ""
+                                    correoUsuario = ""
+                                    contrasenaUsuario = ""
+                                    edadUsuario = ""
+                                    adminUsuario = false
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Agregar usuario")
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
                     Divider()
                     Spacer(modifier = Modifier.height(8.dp))
+
                     Text("Usuarios actuales", style = MaterialTheme.typography.titleMedium)
                     Spacer(modifier = Modifier.height(8.dp))
-                    LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
+
+                    // 🔹 Lista de usuarios (mitad inferior)
+                    LazyColumn(modifier = Modifier.weight(1f)) {
                         items(usuarios) { user ->
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 4.dp),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                )
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -420,10 +501,41 @@ fun PantallaAdmin(navController: NavController) {
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text("${user.nombre} ${user.apellido}", style = MaterialTheme.typography.bodyLarge)
-                                        Text(user.correo, style = MaterialTheme.typography.bodyMedium)
+                                        Text(
+                                            "${user.nombre} ${user.apellido}",
+                                            style = MaterialTheme.typography.bodyLarge
+                                        )
+                                        Text(
+                                            user.correo,
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
                                         Text("Edad: ${user.edad}")
-                                        Text(if (user.admin) "Admin" else "Usuario", style = MaterialTheme.typography.bodySmall)
+                                        Text(
+                                            if (user.admin) "Admin" else "Usuario",
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        // Botón para ir a la pantalla de edición de usuario
+                                        TextButton(
+                                            onClick = {
+                                                user.id?.let { id ->
+                                                    navController.navigate("editar_usuario/$id")
+                                                }
+                                            }
+                                        ) {
+                                            Text("Editar")
+                                        }
+                                        // Botón para eliminar usuario
+                                        TextButton(
+                                            onClick = {
+                                                user.id?.let { id ->
+                                                    usuariosVM.eliminarUsuario(id)
+                                                }
+                                            }
+                                        ) {
+                                            Text("Eliminar")
+                                        }
                                     }
                                 }
                             }
