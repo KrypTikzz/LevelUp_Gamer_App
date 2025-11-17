@@ -1,6 +1,9 @@
 @file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.example.levelup_gamerapp.ui
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -13,42 +16,34 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
-
-data class Noticia(
-    val id: Int,
-    val titulo: String,
-    val resumen: String,
-    val imagenUrl: String
-)
+import com.example.levelup_gamerapp.remote.NoticiaMmoBombDTO
+import com.example.levelup_gamerapp.repository.NoticiasRepository
 
 @Composable
 fun PantallaNovedades(navBack: () -> Unit = {}) {
-    val novedades = remember {
-        listOf(
-            Noticia(
-                id = 1,
-                titulo = "Nuevas tarjetas graficas en camino",
-                resumen = "Contaremos con nuevas graficas RTX 5090 a la venta",
-                imagenUrl = "https://encrypted-tbn0.gstatic.com/shopping?q=tbn:ANd9GcRacRECxeOSUQiTMaoiCvkKw5XO24uU26XdI1IorlgYRizLWPOGegtuZ3orrru3VOMNzx6jP81Dc2r5P4iuUOsn6RFpqKzmmG4LdKpJks72jcN-L_mpggrk2w"
-            ),
-            Noticia(
-                id = 2,
-                titulo = "Sorteos y descuenteos",
-                resumen = "Ofreceremos sorteos y descuentos en los proximos dias atentos.",
-                imagenUrl = "https://pbs.twimg.com/media/EX7okSMWoAAZv0R?format=jpg&name=large"
-            ),
-            Noticia(
-                id = 3,
-                titulo = "Mantenimiento en la pagina",
-                resumen = "Estaremos haciendo matenmiento en la pagina el dia 28 a las 04:00.",
-                imagenUrl = "https://destakamarketing.com/wp-content/uploads/2024/09/mantenimiento-web-1024x597.webp"
-            )
-        )
+    val context = LocalContext.current
+    val repo = remember { NoticiasRepository() }
+
+    var noticias by remember { mutableStateOf<List<NoticiaMmoBombDTO>>(emptyList()) }
+    var cargando by remember { mutableStateOf(true) }
+    var errorMsg by remember { mutableStateOf<String?>(null) }
+
+    // Cargamos las noticias gamer desde la API de MMOBomb
+    LaunchedEffect(Unit) {
+        try {
+            noticias = repo.obtenerNoticias()
+            errorMsg = null
+        } catch (e: Exception) {
+            errorMsg = e.message ?: "Error desconocido"
+        } finally {
+            cargando = false
+        }
     }
 
     Scaffold(
@@ -56,7 +51,7 @@ fun PantallaNovedades(navBack: () -> Unit = {}) {
             TopAppBar(
                 title = {
                     Text(
-                        text = "Novedades",
+                        text = "Novedades gamer",
                         color = Color(0xFF39FF14),
                         fontWeight = FontWeight.Bold
                     )
@@ -66,48 +61,99 @@ fun PantallaNovedades(navBack: () -> Unit = {}) {
         },
         containerColor = Color.Black
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black)
-                .padding(padding)
-        ) {
-            items(novedades) { noticia ->
-                Card(
+        when {
+            cargando -> {
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp)
-                        .clickable {
-                            // Aquí podrás navegar al detalle: nav.navigate("noticia/${noticia.id}")
-                        },
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF111111))
+                        .fillMaxSize()
+                        .background(Color.Black)
+                        .padding(padding),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Image(
-                            painter = rememberAsyncImagePainter(noticia.imagenUrl),
-                            contentDescription = noticia.titulo,
+                    CircularProgressIndicator(color = Color(0xFF39FF14))
+                }
+            }
+
+            errorMsg != null -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black)
+                        .padding(padding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Error al cargar noticias: $errorMsg",
+                        color = Color.White
+                    )
+                }
+            }
+
+            noticias.isEmpty() -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black)
+                        .padding(padding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No hay noticias disponibles por ahora",
+                        color = Color.White
+                    )
+                }
+            }
+
+            else -> {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black)
+                        .padding(padding)
+                ) {
+                    items(noticias) { noticia ->
+                        Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(180.dp),
-                            contentScale = ContentScale.Crop
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            noticia.titulo,
-                            color = Color(0xFF39FF14),
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            noticia.resumen,
-                            color = Color.White,
-                            fontSize = 14.sp,
-                            maxLines = 3,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Divider(color = Color(0xFF1E90FF), thickness = 1.dp)
+                                .padding(12.dp)
+                                .clickable {
+                                    // Abrir la noticia en el navegador
+                                    val intent = Intent(
+                                        Intent.ACTION_VIEW,
+                                        Uri.parse(noticia.article_url)
+                                    )
+                                    context.startActivity(intent)
+                                },
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF111111))
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Image(
+                                    painter = rememberAsyncImagePainter(noticia.thumbnail),
+                                    contentDescription = noticia.title,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(180.dp),
+                                    contentScale = ContentScale.Crop
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    noticia.title,
+                                    color = Color(0xFF39FF14),
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    noticia.short_description,
+                                    color = Color.White,
+                                    fontSize = 14.sp,
+                                    maxLines = 3,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Divider(color = Color(0xFF1E90FF), thickness = 1.dp)
+                            }
+                        }
                     }
                 }
             }
