@@ -11,24 +11,23 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * ViewModel que gestiona el listado y la creación de categorías a través del
- * backend. Expone un flujo de categorías y métodos para recargar y crear
- * categorías. Utiliza un [RemoteCategoriasRepository] para realizar las
- * operaciones de red.
+ * ViewModel que gestiona el listado y la creación/actualización/eliminación
+ * de categorías a través del backend.
  */
-class CategoriasViewModel(private val repository: RemoteCategoriasRepository) : ViewModel() {
+class CategoriasViewModel(
+    private val repository: RemoteCategoriasRepository
+) : ViewModel() {
+
     // Flujo interno que contiene la lista de categorías actuales.
     private val _categorias = MutableStateFlow<List<CategoriaDTO>>(emptyList())
 
     /**
-     * Flujo observable para la UI. Se emite una lista actualizada cada vez
-     * que se recargan las categorías o se crea una nueva.
+     * Flujo observable para la UI.
      */
     val categorias: StateFlow<List<CategoriaDTO>> = _categorias.asStateFlow()
 
     /**
-     * Recarga la lista de categorías desde el servidor. Si ocurre una
-     * excepción, se propagará para ser gestionada por la UI.
+     * Recarga la lista de categorías desde el servidor.
      */
     fun cargarCategorias() {
         viewModelScope.launch {
@@ -37,15 +36,31 @@ class CategoriasViewModel(private val repository: RemoteCategoriasRepository) : 
     }
 
     /**
-     * Envía una solicitud de creación de categoría al backend y recarga la
-     * lista si la operación tiene éxito. Cualquier excepción se propagará
-     * hacia la capa de presentación.
-     *
-     * @param categoria La categoría a crear.
+     * Crea una nueva categoría y recarga la lista.
      */
     fun crearCategoria(categoria: CategoriaDTO) {
         viewModelScope.launch {
             repository.crearCategoria(categoria)
+            cargarCategorias()
+        }
+    }
+
+    /**
+     * Actualiza una categoría existente y recarga la lista.
+     */
+    fun actualizarCategoria(id: Long, categoria: CategoriaDTO) {
+        viewModelScope.launch {
+            repository.actualizarCategoria(id, categoria)
+            cargarCategorias()
+        }
+    }
+
+    /**
+     * Elimina una categoría y recarga la lista.
+     */
+    fun eliminarCategoria(id: Long) {
+        viewModelScope.launch {
+            repository.eliminarCategoria(id)
             cargarCategorias()
         }
     }
@@ -54,7 +69,10 @@ class CategoriasViewModel(private val repository: RemoteCategoriasRepository) : 
 /**
  * Factory para instanciar [CategoriasViewModel] con su repositorio inyectado.
  */
-class CategoriasViewModelFactory(private val repository: RemoteCategoriasRepository) : ViewModelProvider.Factory {
+class CategoriasViewModelFactory(
+    private val repository: RemoteCategoriasRepository
+) : ViewModelProvider.Factory {
+
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(CategoriasViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")

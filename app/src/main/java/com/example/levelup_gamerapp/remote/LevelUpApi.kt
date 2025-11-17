@@ -9,9 +9,10 @@ import retrofit2.http.*
  * implementaciones que realizan las peticiones HTTP.
  *
  * Se han añadido las operaciones de productos, categorías y usuarios para
- * completar la migración a un backend 100 % remoto.
+ * completar la migración a un backend 100 % remoto.
  */
 interface LevelUpApi {
+
     // ---------- Productos ----------
 
     /** Obtiene el listado completo de productos. */
@@ -46,6 +47,17 @@ interface LevelUpApi {
     /** Crea una nueva categoría. */
     @POST("api/categorias")
     suspend fun crearCategoria(@Body categoria: CategoriaDTO): Response<CategoriaDTO>
+
+    /** Actualiza una categoría existente. */
+    @PUT("api/categorias/{id}")
+    suspend fun actualizarCategoria(
+        @Path("id") id: Long,
+        @Body categoria: CategoriaDTO
+    ): Response<CategoriaDTO>
+
+    /** Elimina una categoría por su identificador. */
+    @DELETE("api/categorias/{id}")
+    suspend fun eliminarCategoria(@Path("id") id: Long): Response<Unit>
 
     // ---------- Usuarios ----------
 

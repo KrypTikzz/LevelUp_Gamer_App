@@ -5,10 +5,8 @@ import com.example.levelup_gamerapp.remote.CategoriaDTO
 
 /**
  * Repositorio que se comunica con el backend para gestionar categorías. Este
- * repositorio ofrece métodos para obtener la lista completa de categorías y
- * crear nuevas categorías a través de la API REST. Cada métodoO lanza una
- * excepción si la operación no fue exitosa, permitiendo que el ViewModel
- * gestione los errores de red de manera adecuada.
+ * repositorio ofrece métodos para obtener la lista completa de categorías,
+ * crear nuevas, actualizarlas y eliminarlas a través de la API REST.
  */
 class RemoteCategoriasRepository {
     private val api = ApiClient.api
@@ -24,11 +22,6 @@ class RemoteCategoriasRepository {
 
     /**
      * Crea una nueva categoría en el backend.
-     *
-     * @param categoria La categoría que se desea crear.
-     * @return La categoría creada devuelta por el servidor.
-     * @throws Exception si la respuesta HTTP no indica éxito o no contiene
-     *         cuerpo.
      */
     suspend fun crearCategoria(categoria: CategoriaDTO): CategoriaDTO {
         val response = api.crearCategoria(categoria)
@@ -37,6 +30,29 @@ class RemoteCategoriasRepository {
                 ?: throw Exception("Respuesta sin cuerpo al crear categoría")
         } else {
             throw Exception("Error al crear categoría: código ${response.code()}")
+        }
+    }
+
+    /**
+     * Actualiza una categoría existente en el backend.
+     */
+    suspend fun actualizarCategoria(id: Long, categoria: CategoriaDTO): CategoriaDTO {
+        val response = api.actualizarCategoria(id, categoria)
+        if (response.isSuccessful) {
+            return response.body()
+                ?: throw Exception("Respuesta sin cuerpo al actualizar categoría")
+        } else {
+            throw Exception("Error al actualizar categoría: código ${response.code()}")
+        }
+    }
+
+    /**
+     * Elimina una categoría por su identificador.
+     */
+    suspend fun eliminarCategoria(id: Long) {
+        val response = api.eliminarCategoria(id)
+        if (!response.isSuccessful) {
+            throw Exception("Error al eliminar categoría: código ${response.code()}")
         }
     }
 }

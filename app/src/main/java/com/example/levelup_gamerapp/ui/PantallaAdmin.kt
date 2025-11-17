@@ -76,6 +76,8 @@ fun PantallaAdmin(navController: NavController) {
     // ---- Estados del formulario de categorías ----
     var nombreCategoria by remember { mutableStateOf("") }
     var descripcionCategoria by remember { mutableStateOf("") }
+    // 🆕 id de la categoría que se está editando; null -> crear
+    var categoriaEditandoId by remember { mutableStateOf<Long?>(null) }
 
     // ---- Estados del formulario de usuarios ----
     var nombreUsuario by remember { mutableStateOf("") }
@@ -316,7 +318,11 @@ fun PantallaAdmin(navController: NavController) {
                             .fillMaxWidth()
                             .verticalScroll(rememberScrollState())
                     ) {
-                        Text("Nueva categoría", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            if (categoriaEditandoId == null) "Nueva categoría"
+                            else "Editar categoría",
+                            style = MaterialTheme.typography.titleMedium
+                        )
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedTextField(
                             value = nombreCategoria,
@@ -334,18 +340,48 @@ fun PantallaAdmin(navController: NavController) {
                         Button(
                             onClick = {
                                 if (nombreCategoria.isNotBlank()) {
-                                    val nuevaCat = CategoriaDTO(
+                                    val dto = CategoriaDTO(
+                                        id = categoriaEditandoId,
                                         nombreCategoria = nombreCategoria.trim(),
                                         descripcionCategoria = descripcionCategoria.trim()
                                     )
-                                    categoriasVM.crearCategoria(nuevaCat)
+                                    if (categoriaEditandoId == null) {
+                                        // Crear nueva categoría
+                                        categoriasVM.crearCategoria(dto)
+                                    } else {
+                                        // Actualizar existente
+                                        categoriasVM.actualizarCategoria(
+                                            categoriaEditandoId!!,
+                                            dto
+                                        )
+                                    }
+                                    // Limpiar formulario
                                     nombreCategoria = ""
                                     descripcionCategoria = ""
+                                    categoriaEditandoId = null
                                 }
                             },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Agregar categoría")
+                            Text(
+                                if (categoriaEditandoId == null)
+                                    "Agregar categoría"
+                                else
+                                    "Guardar cambios"
+                            )
+                        }
+
+                        // Botón para cancelar la edición si corresponde
+                        if (categoriaEditandoId != null) {
+                            TextButton(
+                                onClick = {
+                                    nombreCategoria = ""
+                                    descripcionCategoria = ""
+                                    categoriaEditandoId = null
+                                }
+                            ) {
+                                Text("Cancelar edición")
+                            }
                         }
                     }
 
@@ -384,8 +420,34 @@ fun PantallaAdmin(navController: NavController) {
                                         )
                                         Text("ID: ${cat.id ?: "-"}")
                                     }
-                                    // Aquí podrías añadir Editar/Eliminar si más adelante
-                                    // creas pantallas o lógica para gestionar categorías.
+                                    // 🆕 Botones Editar / Eliminar
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        TextButton(
+                                            onClick = {
+                                                // Cargar datos en el formulario para editar
+                                                categoriaEditandoId = cat.id
+                                                nombreCategoria = cat.nombreCategoria
+                                                descripcionCategoria = cat.descripcionCategoria
+                                            }
+                                        ) {
+                                            Text("Editar")
+                                        }
+                                        TextButton(
+                                            onClick = {
+                                                cat.id?.let { id ->
+                                                    // Si estoy editando esta misma, limpiar formulario
+                                                    if (categoriaEditandoId == id) {
+                                                        nombreCategoria = ""
+                                                        descripcionCategoria = ""
+                                                        categoriaEditandoId = null
+                                                    }
+                                                    categoriasVM.eliminarCategoria(id)
+                                                }
+                                            }
+                                        ) {
+                                            Text("Eliminar")
+                                        }
+                                    }
                                 }
                             }
                         }
