@@ -16,14 +16,14 @@ open class RemoteCategoriasRepository {
      *
      * @return Lista de [CategoriaDTO] representando las categorías actuales.
      */
-    suspend fun obtenerCategorias(): List<CategoriaDTO> {
+    open suspend fun obtenerCategorias(): List<CategoriaDTO> {
         return api.obtenerCategorias()
     }
 
     /**
      * Crea una nueva categoría en el backend.
      */
-    suspend fun crearCategoria(categoria: CategoriaDTO): CategoriaDTO {
+    open suspend fun crearCategoria(categoria: CategoriaDTO): CategoriaDTO {
         val response = api.crearCategoria(categoria)
         if (response.isSuccessful) {
             return response.body()
@@ -36,7 +36,7 @@ open class RemoteCategoriasRepository {
     /**
      * Actualiza una categoría existente en el backend.
      */
-    suspend fun actualizarCategoria(id: Long, categoria: CategoriaDTO): CategoriaDTO {
+    open suspend fun actualizarCategoria(id: Long, categoria: CategoriaDTO): CategoriaDTO {
         val response = api.actualizarCategoria(id, categoria)
         if (response.isSuccessful) {
             return response.body()
@@ -49,7 +49,7 @@ open class RemoteCategoriasRepository {
     /**
      * Elimina una categoría por su identificador.
      */
-    suspend fun eliminarCategoria(id: Long) {
+    open suspend fun eliminarCategoria(id: Long) {
         val response = api.eliminarCategoria(id)
         if (!response.isSuccessful) {
             throw Exception("Error al eliminar categoría: código ${response.code()}")

@@ -15,21 +15,21 @@ open class RemoteProductosRepository {
     /**
      * Obtiene el listado completo de productos desde el servidor.
      */
-    suspend fun obtenerProductos(): List<ProductoDTO> {
+    open suspend fun obtenerProductos(): List<ProductoDTO> {
         return api.obtenerProductos()
     }
 
     /**
      * Obtiene un producto concreto por su identificador.
      */
-    suspend fun obtenerProducto(id: Long): ProductoDTO {
+    open suspend fun obtenerProducto(id: Long): ProductoDTO {
         return api.obtenerProducto(id)
     }
 
     /**
      * Crea un nuevo producto y devuelve el recurso creado devuelto por el servidor.
      */
-    suspend fun crearProducto(producto: ProductoDTO): ProductoDTO {
+    open suspend fun crearProducto(producto: ProductoDTO): ProductoDTO {
         val response: Response<ProductoDTO> = api.crearProducto(producto)
         if (response.isSuccessful) {
             return response.body() ?: throw Exception("Respuesta sin cuerpo al crear producto")
@@ -42,7 +42,7 @@ open class RemoteProductosRepository {
      * Actualiza un producto existente.
      * Devuelve el producto actualizado que devuelve el backend.
      */
-    suspend fun actualizarProducto(id: Long, producto: ProductoDTO): ProductoDTO {
+    open suspend fun actualizarProducto(id: Long, producto: ProductoDTO): ProductoDTO {
         val response: Response<ProductoDTO> = api.actualizarProducto(id, producto)
         if (response.isSuccessful) {
             return response.body() ?: throw Exception("Respuesta sin cuerpo al actualizar producto")
@@ -54,7 +54,7 @@ open class RemoteProductosRepository {
     /**
      * Elimina un producto por su identificador.
      */
-    suspend fun eliminarProducto(id: Long) {
+    open suspend fun eliminarProducto(id: Long) {
         val response: Response<Unit> = api.eliminarProducto(id)
         if (!response.isSuccessful) {
             throw Exception("Error al eliminar producto: código ${'$'}{response.code()}")

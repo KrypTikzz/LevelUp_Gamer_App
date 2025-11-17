@@ -35,7 +35,7 @@ open class RegistroUsuarioRepository(
      * Registra un usuario en el backend.
      * La Entity se usa como contenedor de datos en la app.
      */
-    suspend fun registrarUsuario(usuario: RegistroUsuarioEntity) {
+    open suspend fun registrarUsuario(usuario: RegistroUsuarioEntity) {
         // ✅ Regla: si el correo es admin@levelup.cl, será admin
         val esAdmin = usuario.correo.equals("admin@levelup.cl", ignoreCase = true)
 
@@ -57,7 +57,7 @@ open class RegistroUsuarioRepository(
      * Verifica si ya existe un usuario con el correo dado en el backend.
      * Si existe, devolvemos una RegistroUsuarioEntity “armada” desde el DTO.
      */
-    suspend fun verificarCorreo(correo: String): RegistroUsuarioEntity? {
+    open suspend fun verificarCorreo(correo: String): RegistroUsuarioEntity? {
         val dto = remote.buscarPorCorreo(correo)
         return dto?.let { dtoToEntity(it) }
     }
