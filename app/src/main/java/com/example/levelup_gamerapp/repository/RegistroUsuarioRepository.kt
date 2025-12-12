@@ -1,9 +1,14 @@
 package com.example.levelup_gamerapp.repository
 
 import com.example.levelup_gamerapp.local.RegistroUsuarioEntity
+import com.example.levelup_gamerapp.remote.ApiClient
 import com.example.levelup_gamerapp.remote.UsuarioDTO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import java.time.LocalDate
+import com.example.levelup_gamerapp.remote.dto.RegisterRequestDTO
+import com.example.levelup_gamerapp.core.UserSession
+
 
 /**
  * Repositorio de registro que ahora usa el backend a través de
@@ -36,20 +41,26 @@ open class RegistroUsuarioRepository(
      * La Entity se usa como contenedor de datos en la app.
      */
     open suspend fun registrarUsuario(usuario: RegistroUsuarioEntity) {
-        // ✅ Regla: si el correo es admin@levelup.cl, será admin
-        val esAdmin = usuario.correo.equals("admin@levelup.cl", ignoreCase = true)
+        val anioNacimiento = LocalDate.now().year - usuario.edad
+        val fechaNacimientoStr = "$anioNacimiento-01-01"
 
-        val dto = UsuarioDTO(
-            id = null,
+        val request = RegisterRequestDTO(
             nombre = usuario.nombre,
             apellido = usuario.apellido,
             correo = usuario.correo,
             contrasena = usuario.contrasena,
-            edad = usuario.edad,
-            admin = esAdmin   // 👈 aquí usamos la regla
+            fechaNacimiento = fechaNacimientoStr
         )
-        // No enviamos descuentoAplicado ni fotoPerfil al backend (por ahora)
-        remote.crearUsuario(dto)
+
+        // 1. Registro en el backend
+        val response = ApiClient.authApi.registrar(request)
+
+        // 2. Guardamos sesión completa (Token + ID + Datos)
+        UserSession.token = response.token
+        UserSession.idUsuario = response.idUsuario
+        UserSession.nombreCompleto = response.nombreCompleto
+        UserSession.correo = response.correo
+        UserSession.rol = response.rol
     }
 
 

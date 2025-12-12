@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
+import com.example.levelup_gamerapp.core.UserSession // Importamos UserSession
 import com.example.levelup_gamerapp.local.AppDatabase
 import com.example.levelup_gamerapp.local.CarritoEntity
 import com.example.levelup_gamerapp.remote.ApiClient
@@ -24,7 +25,6 @@ import com.example.levelup_gamerapp.remote.ItemPedidoRequest
 import com.example.levelup_gamerapp.repository.CarritoRepository
 import com.example.levelup_gamerapp.viewmodel.CarritoViewModel
 import com.example.levelup_gamerapp.viewmodel.CarritoViewModelFactory
-import com.example.levelup_gamerapp.viewmodel.SesionViewModel
 import kotlinx.coroutines.launch
 
 /**
@@ -46,12 +46,8 @@ fun PantallaCarrito() {
     val repo = CarritoRepository(carritoDao)
     val carritoVM: CarritoViewModel = viewModel(factory = CarritoViewModelFactory(repo))
 
-    // ViewModel de sesión para obtener el usuario actualmente logueado
-    val sesionViewModel: SesionViewModel = viewModel()
-    val usuarioActual by sesionViewModel.usuarioActual.collectAsState()
-
-    // No necesitamos el DAO de productos en esta versión porque el stock se gestiona en el backend
-    // val productosDao = db.productosDao()
+    // NOTA: Ya no necesitamos SesionViewModel aquí porque leeremos directo de UserSession
+    // para asegurar que tenemos el ID más reciente tras el Login/Registro.
 
     val carrito by carritoVM.carrito.collectAsState(initial = emptyList())
 
@@ -161,8 +157,10 @@ fun PantallaCarrito() {
                                         return@launch
                                     }
 
-                                    // Comprobamos que haya un usuario logueado
-                                    val usuarioId = usuarioActual?.id
+                                    // CAMBIO PRINCIPAL: Usamos UserSession directamente
+                                    // Esto garantiza que si acabas de loguearte, el ID esté disponible.
+                                    val usuarioId = UserSession.idUsuario
+
                                     if (usuarioId == null) {
                                         snackbarHostState.showSnackbar("Debes iniciar sesión para comprar")
                                         return@launch
@@ -182,10 +180,10 @@ fun PantallaCarrito() {
                                     )
 
                                     try {
-                                        val response = ApiClient.api.crearPedido(request)
+                                        // Llamada a la API usando 'api' (que ya tiene el interceptor configurado)
+                                        val response = ApiClient.levelUpApi.crearPedido(request) //
 
                                         if (response.isSuccessful) {
-                                            // No se actualiza el stock local: los productos se gestionan en el backend.
                                             carritoVM.vaciarCarrito()
                                             snackbarHostState.showSnackbar("Compra registrada en el servidor ✅")
                                         } else {
@@ -194,6 +192,7 @@ fun PantallaCarrito() {
                                             )
                                         }
                                     } catch (e: Exception) {
+                                        e.printStackTrace()
                                         snackbarHostState.showSnackbar("No se pudo contactar al servidor 😕")
                                     }
                                 }
