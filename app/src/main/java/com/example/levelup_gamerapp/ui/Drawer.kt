@@ -44,6 +44,8 @@ fun DrawerContent(
     ) {
         RowTopClose(scope, drawerState)
 
+        Spacer(modifier = Modifier.height(8.dp))
+
         Text(
             text = "LEVEL-UP GAMER",
             color = Color(0xFF39FF14),
@@ -60,7 +62,12 @@ fun DrawerContent(
         DrawerItem("Contacto", "contacto", Color(0xFFFFA500), onNavigate)
         DrawerItem("Carrito", "carrito", Color(0xFFFFA500), onNavigate)
 
-        // Admin
+        // ✅ Historial (cliente)
+        if (isLoggedIn && !esAdmin) {
+            DrawerItem("Historial de compras", "mis_pedidos", Color(0xFF39FF14), onNavigate)
+        }
+
+        // ✅ Admin (solo si corresponde)
         if (isLoggedIn && esAdmin) {
             DrawerItem("Administrador", "admin", Color(0xFFE91E63), onNavigate)
         }
@@ -95,6 +102,8 @@ fun DrawerContent(
                 Text("Cerrar sesión", color = Color.White)
             }
         }
+
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
@@ -103,10 +112,13 @@ private fun RowTopClose(scope: CoroutineScope, drawerState: DrawerState) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(10.dp),
+        horizontalArrangement = Arrangement.End,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(onClick = { scope.launch { drawerState.close() } }) {
+        IconButton(
+            onClick = { scope.launch { drawerState.close() } }
+        ) {
             Icon(
                 imageVector = Icons.Default.Close,
                 contentDescription = "Cerrar menú",
