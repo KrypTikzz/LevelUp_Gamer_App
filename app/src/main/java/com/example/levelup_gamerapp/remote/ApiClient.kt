@@ -1,27 +1,52 @@
 package com.example.levelup_gamerapp.remote
 
+import com.example.levelup_gamerapp.core.AuthInterceptor
+import com.example.levelup_gamerapp.remote.api.AuthApi
+import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 /**
- * Configura el cliente de Retrofit para acceder al backend de LevelUp Gamer. La
- * URL base apunta a `10.0.2.2:8080`, que es la forma de acceder al host
- * local cuando la app se ejecuta en un emulador Android. Para dispositivos
- * físicos o servidores remotos se debe ajustar esta URL según corresponda.
+ * configura el cliente de retrofit para acceder al backend de levelup gamer.
+ * incorpora un interceptor para enviar el token jwt automáticamente
+ * en cada request autenticada.
  */
 object ApiClient {
-    // Dirección base del backend. Cambia según la configuración de tu servidor.
+
+    // url base del backend
     private const val BASE_URL = "http://10.0.2.2:8080/"
 
     /**
-     * Instancia perezosa de la interfaz de la API. Se crea una sola vez y se
-     * reutiliza para todas las llamadas.
+     * cliente http con interceptor jwt
      */
-    val api: LevelUpApi by lazy {
+    private val okHttpClient: OkHttpClient by lazy {
+        OkHttpClient.Builder()
+            .addInterceptor(AuthInterceptor())
+            .build()
+    }
+
+    /**
+     * instancia única de retrofit
+     */
+    private val retrofit: Retrofit by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL)
+            .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-            .create(LevelUpApi::class.java)
+    }
+
+    /**
+     * api de autenticación (login / registro)
+     */
+    val authApi: AuthApi by lazy {
+        retrofit.create(AuthApi::class.java)
+    }
+
+    /**
+     * api general de la aplicación (productos, categorías, etc.)
+     */
+    val levelUpApi: LevelUpApi by lazy {
+        retrofit.create(LevelUpApi::class.java)
     }
 }

@@ -6,66 +6,74 @@ import retrofit2.Response
 import retrofit2.HttpException
 
 /**
- * Repositorio remoto para la gestión de usuarios.
- * Ofrece operaciones CRUD completas contra las rutas expuestas en el backend.
+ * repositorio remoto para la gestión de usuarios.
+ * todas las operaciones se realizan contra el backend
+ * y se autentican mediante jwt (interceptor).
  */
 open class RemoteUsuariosRepository {
-    private val api = ApiClient.api
 
-    /** Obtiene todos los usuarios almacenados en el backend. */
+    // api general del backend (usuarios, productos, etc.)
+    private val api = ApiClient.levelUpApi
+
+    /** obtiene todos los usuarios almacenados en el backend. */
     open suspend fun obtenerUsuarios(): List<UsuarioDTO> {
         return api.obtenerUsuarios()
     }
 
-    /** Obtiene un usuario por su identificador. */
+    /** obtiene un usuario por su identificador. */
     open suspend fun obtenerUsuario(id: Long): UsuarioDTO {
         return api.obtenerUsuario(id)
     }
 
-    /** Crea un nuevo usuario. Devuelve el usuario resultante. */
+    /** crea un nuevo usuario. devuelve el usuario resultante. */
     open suspend fun crearUsuario(usuario: UsuarioDTO): UsuarioDTO {
         val response: Response<UsuarioDTO> = api.crearUsuario(usuario)
         if (response.isSuccessful) {
-            return response.body() ?: throw Exception("Respuesta sin cuerpo al crear usuario")
+            return response.body()
+                ?: throw Exception("respuesta sin cuerpo al crear usuario")
         } else {
-            throw Exception("Error al crear usuario: código ${'$'}{response.code()}")
+            throw Exception("error al crear usuario: código ${response.code()}")
         }
     }
 
-    /** Actualiza un usuario existente. Devuelve el usuario actualizado. */
+    /** actualiza un usuario existente. devuelve el usuario actualizado. */
     open suspend fun actualizarUsuario(id: Long, usuario: UsuarioDTO): UsuarioDTO {
         val response: Response<UsuarioDTO> = api.actualizarUsuario(id, usuario)
         if (response.isSuccessful) {
-            return response.body() ?: throw Exception("Respuesta sin cuerpo al actualizar usuario")
+            return response.body()
+                ?: throw Exception("respuesta sin cuerpo al actualizar usuario")
         } else {
-            throw Exception("Error al actualizar usuario: código ${'$'}{response.code()}")
+            throw Exception("error al actualizar usuario: código ${response.code()}")
         }
     }
 
-    /** Elimina un usuario por su identificador. */
+    /** elimina un usuario por su identificador. */
     open suspend fun eliminarUsuario(id: Long) {
         val response: Response<Unit> = api.eliminarUsuario(id)
         if (!response.isSuccessful) {
-            throw Exception("Error al eliminar usuario: código ${'$'}{response.code()}")
+            throw Exception("error al eliminar usuario: código ${response.code()}")
         }
     }
 
-    /** Busca un usuario por su correo electrónico. Devuelve null si no se encuentra. */
+    /** busca un usuario por correo. devuelve null si no existe. */
     open suspend fun buscarPorCorreo(correo: String): UsuarioDTO? {
         return try {
             api.buscarUsuarioPorCorreo(correo)
         } catch (e: HttpException) {
-            // Si el backend responde 404 (no encontrado), lo interpretamos como "no existe usuario"
-            if (e.code() == 404) {
-                null
-            } else {
-                // Otros códigos (500, 400, etc.) los volvemos a lanzar para no ocultar errores graves
-                throw e
-            }
+            if (e.code() == 404) null else throw e
         }
     }
 
-    /** Realiza el inicio de sesión. Devuelve el usuario autenticado o null si las credenciales no son válidas. */
+    /**
+     * login NO DEBE USARSE aquí
+     * el login se realiza exclusivamente vía AuthApi (/api/auth/login)
+     * este metodo se deja solo si el backend antiguo aún lo expone,
+     * pero NO debe usarse en la app final.
+     */
+    @Deprecated(
+        message = "usar AuthApi para login con jwt",
+        level = DeprecationLevel.WARNING
+    )
     open suspend fun login(correo: String, contrasena: String): UsuarioDTO? {
         return api.login(correo, contrasena)
     }
