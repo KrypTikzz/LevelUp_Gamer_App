@@ -38,6 +38,8 @@ interface LevelUpApi {
     @DELETE("api/productos/{id}")
     suspend fun eliminarProducto(@Path("id") id: Long): Response<Unit>
 
+
+
     // ---------- Categorías ----------
 
     /** Devuelve todas las categorías disponibles. */
@@ -99,5 +101,30 @@ interface LevelUpApi {
 
     /** Registra un nuevo pedido. */
     @POST("api/pedidos")
-    suspend fun crearPedido(@Body request: CrearPedidoRequest): Response<PedidoResponseDTO>
+    suspend fun crearPedido(@Body request: CrearPedidoRequest): retrofit2.Response<PedidoResponseDTO>
+
+    /** Historial de compras del usuario logueado (cliente). */
+    @GET("api/pedidos/usuario/{usuarioId}")
+    suspend fun listarPedidosPorUsuario(@Path("usuarioId") usuarioId: Long): List<PedidoResponseDTO>
+
+    /** Obtener un pedido por ID (por si después quieres detalle directo). */
+    @GET("api/pedidos/{id}")
+    suspend fun obtenerPedido(@Path("id") id: Long): PedidoResponseDTO
+
+    /** Listar todos (útil si después lo quieres para admin). */
+    @GET("api/pedidos")
+    suspend fun listarPedidos(): List<PedidoResponseDTO>
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
