@@ -23,8 +23,7 @@ import com.example.levelup_gamerapp.viewmodel.SesionViewModel
 import kotlinx.coroutines.launch
 
 /**
- * Punto central de navegación de la aplicación. Gestiona el `Drawer`, la barra
- * superior y delega en [AppNavGraph] la definición de las rutas.
+ * Punto central de navegación de la aplicación. Gestiona el Drawer, la barra superior y el grafo.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,8 +72,8 @@ fun AppNavHost() {
                     },
                     title = {
                         Text(
-                            text = "LEVEL-UP GAMER",
-                            color = Color(0xFF39FF14)
+                            text = "LevelUp Gamer",
+                            color = Color.White
                         )
                     },
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -94,9 +93,6 @@ fun AppNavHost() {
     }
 }
 
-/**
- * Declaración del grafo de navegación.
- */
 @Composable
 private fun AppNavGraph(
     navController: NavHostController,
@@ -114,25 +110,22 @@ private fun AppNavGraph(
             .padding(innerPadding)
             .background(Color.Black)
     ) {
-        // Pantalla de login
         composable("login") {
             LoginScreen(navController = navController, sesionViewModel = sesionViewModel)
         }
-        // Pantalla de registro
         composable("registro") {
             RegistroUsuarioScreen(navController = navController)
         }
-        // Pantalla principal (home con destacados)
         composable("inicio") {
             PantallaPrincipal(navController)
         }
-        // Catálogo de productos (remoto)
         composable("productos") {
             PantallaProductos(navController)
         }
-        // Detalle de producto
+
+        // ✅ Long ID
         composable("producto/{id}") { backStackEntry ->
-            val id = backStackEntry.arguments?.getString("id")?.toIntOrNull()
+            val id = backStackEntry.arguments?.getString("id")?.toLongOrNull()
             if (id != null) {
                 PantallaProducto(
                     id = id,
@@ -142,12 +135,21 @@ private fun AppNavGraph(
                 PlaceholderScreen("Error: producto no encontrado")
             }
         }
-        // Secciones informativas
+
         composable("novedades") { PantallaNovedades() }
         composable("contacto") { PantallaContacto() }
         composable("carrito") { PantallaCarrito() }
 
-        // Panel de administrador
+        // ✅ Historial compras (cliente)
+        composable("mis_pedidos") {
+            if (isLoggedIn && !esAdmin) {
+                PantallaMisPedidos(onNavigateBack = { navController.popBackStack() })
+            } else {
+                PlaceholderScreen("Acceso restringido")
+            }
+        }
+
+        // Admin
         composable("admin") {
             if (esAdmin) {
                 PantallaAdmin(navController)
@@ -156,9 +158,9 @@ private fun AppNavGraph(
             }
         }
 
-        // Editar producto (admin)
+        // ✅ Long ID
         composable("editar_producto/{id}") { backStackEntry ->
-            val id = backStackEntry.arguments?.getString("id")?.toIntOrNull()
+            val id = backStackEntry.arguments?.getString("id")?.toLongOrNull()
             if (id != null && esAdmin) {
                 PantallaEditarProducto(navController, id)
             } else {
@@ -166,9 +168,9 @@ private fun AppNavGraph(
             }
         }
 
-        // Editar usuario (admin)
+        // ✅ Long ID
         composable("editar_usuario/{id}") { backStackEntry ->
-            val id = backStackEntry.arguments?.getString("id")?.toIntOrNull() ?: 0
+            val id = backStackEntry.arguments?.getString("id")?.toLongOrNull() ?: 0L
             if (esAdmin) {
                 PantallaEditarUsuario(navController, id)
             } else {
@@ -178,9 +180,6 @@ private fun AppNavGraph(
     }
 }
 
-/**
- * Pantalla simple para mensajes de error / acceso restringido.
- */
 @Composable
 fun PlaceholderScreen(texto: String) {
     Surface(color = Color.Black) {
