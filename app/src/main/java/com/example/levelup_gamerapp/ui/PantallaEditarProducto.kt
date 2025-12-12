@@ -16,30 +16,19 @@ import com.example.levelup_gamerapp.remote.ProductoDTO
 import com.example.levelup_gamerapp.repository.RemoteProductosRepository
 import kotlinx.coroutines.launch
 
-/**
- * Pantalla para editar o crear un producto utilizando el backend como fuente de datos.
- * En lugar de apoyarse en Room y un ViewModel local, esta versión consulta y
- * actualiza directamente a través de [RemoteProductosRepository].
- *
- * Si el `id` que se pasa es mayor que cero se considerará que se está editando un
- * producto existente, el cual se cargará desde el servidor. En caso contrario,
- * se tomará como creación de un nuevo producto.
- *
- * @param navController controlador de navegación para volver a la lista de productos.
- * @param id identificador del producto a editar (usar un valor negativo para crear).
- */
 @Composable
-fun PantallaEditarProducto(navController: NavController, id: Int) {
+fun PantallaEditarProducto(navController: NavController, id: Long) {
+    val context = LocalContext.current
     val repo = remember { RemoteProductosRepository() }
-    val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    // Estados para la consulta del producto existente
-    var loading by remember { mutableStateOf(id > 0) }
-    var productoActual by remember { mutableStateOf<ProductoDTO?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    var loading by remember { mutableStateOf(true) }
     var errorCarga by remember { mutableStateOf<String?>(null) }
 
-    // Estados para los campos de texto
+    var productoActual by remember { mutableStateOf<ProductoDTO?>(null) }
+
     var nombre by remember { mutableStateOf("") }
     var descripcion by remember { mutableStateOf("") }
     var precio by remember { mutableStateOf("") }
@@ -50,7 +39,6 @@ fun PantallaEditarProducto(navController: NavController, id: Int) {
     // Al cargar el producto inicial, actualiza los estados de los campos
     LaunchedEffect(productoActual) {
         productoActual?.let { prod ->
-            // Asignamos los valores provenientes del DTO remoto
             nombre = prod.nombreProducto
             descripcion = prod.descripcionProducto
             precio = prod.precioProducto.toString()
@@ -60,16 +48,18 @@ fun PantallaEditarProducto(navController: NavController, id: Int) {
         }
     }
 
-    // Recuperar producto existente cuando el id es válido (> 0)
     LaunchedEffect(id) {
         if (id > 0) {
             try {
-                productoActual = repo.obtenerProducto(id.toLong())
+                productoActual = repo.obtenerProducto(id)
             } catch (e: Exception) {
                 errorCarga = e.message ?: "Error desconocido"
             } finally {
                 loading = false
             }
+        } else {
+            // Creación de producto nuevo (no se carga nada desde el backend)
+            loading = false
         }
     }
 
@@ -78,23 +68,21 @@ fun PantallaEditarProducto(navController: NavController, id: Int) {
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        // Título de la pantalla
         Text(
-            text = if (id > 0) "Editar Producto" else "Nuevo Producto",
-            style = MaterialTheme.typography.headlineMedium
+            text = if (id > 0) "Editar producto" else "Crear producto",
+            style = MaterialTheme.typography.titleLarge
         )
-        Spacer(modifier = Modifier.padding(8.dp))
 
-        // Mostrar estados de carga o error
+        Spacer(modifier = Modifier.height(12.dp))
+
         when {
             loading -> {
                 Text("Cargando producto…")
             }
             errorCarga != null -> {
-                Text("Error al cargar: ${'$'}errorCarga")
+                Text("Error al cargar: $errorCarga")
             }
             else -> {
-                // Campos editables
                 OutlinedTextField(
                     value = nombre,
                     onValueChange = { nombre = it },
@@ -128,63 +116,60 @@ fun PantallaEditarProducto(navController: NavController, id: Int) {
                 OutlinedTextField(
                     value = stock,
                     onValueChange = { stock = it },
-                    label = { Text("Stock disponible") },
+                    label = { Text("Stock") },
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(modifier = Modifier.padding(8.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                // Botón para guardar cambios o crear
                 Button(
                     onClick = {
-                        // Validaciones mínimas
                         val precioDouble = precio.toDoubleOrNull()
                         val stockInt = stock.toIntOrNull()
-                        if (precioDouble != null && stockInt != null) {
-                            // Construir el DTO actualizado o nuevo
-                            // Construir el DTO actualizado o nuevo.
-                            // Utilizamos las mismas propiedades que el DTO remoto expone.
-                            val nuevoProducto = ProductoDTO(
-                                id = productoActual?.id,
-                                nombreProducto = nombre.trim(),
-                                descripcionProducto = descripcion.trim(),
-                                precioProducto = precioDouble,
-                                imagenUrl = imagenUrl.ifBlank { "https://via.placeholder.com/300" },
-                                cantidadDisponible = stockInt,
-                                // Si estamos editando reutilizamos el categoriaId existente, de lo contrario dejamos 0L.
-                                categoriaId = productoActual?.categoriaId ?: 0L,
-                                categoriaProducto = categoria.ifBlank { productoActual?.categoriaProducto ?: "General" }
-                            )
+
+                        if (nombre.isBlank() || descripcion.isBlank() ||
+                            precioDouble == null || stockInt == null
+                        ) {
                             scope.launch {
-                                try {
-                                    if (id > 0) {
-                                        // Al editar, actualizamos usando el id original del producto
-                                        val prodId = productoActual?.id ?: 0L
-                                        repo.actualizarProducto(prodId, nuevoProducto)
-                                        snackbarHostState.showSnackbar("Producto actualizado correctamente")
-                                    } else {
-                                        repo.crearProducto(nuevoProducto)
-                                        snackbarHostState.showSnackbar("Producto creado correctamente")
-                                    }
-                                    navController.popBackStack()
-                                } catch (e: Exception) {
-                                    snackbarHostState.showSnackbar("Error al guardar: ${'$'}{e.message}")
-                                }
+                                snackbarHostState.showSnackbar("Completa los campos correctamente")
                             }
-                        } else {
-                            scope.launch {
-                                snackbarHostState.showSnackbar("Precio o stock no válido")
+                            return@Button
+                        }
+
+                        val nuevoProducto = ProductoDTO(
+                            id = productoActual?.id,
+                            nombreProducto = nombre.trim(),
+                            descripcionProducto = descripcion.trim(),
+                            precioProducto = precioDouble,
+                            imagenUrl = imagenUrl.ifBlank { "https://via.placeholder.com/300" },
+                            cantidadDisponible = stockInt,
+                            categoriaId = productoActual?.categoriaId ?: 0L,
+                            categoriaProducto = categoria.ifBlank { productoActual?.categoriaProducto ?: "General" }
+                        )
+
+                        scope.launch {
+                            try {
+                                if (id > 0) {
+                                    val prodId = productoActual?.id ?: id
+                                    repo.actualizarProducto(prodId, nuevoProducto)
+                                    snackbarHostState.showSnackbar("Producto actualizado correctamente")
+                                } else {
+                                    repo.crearProducto(nuevoProducto)
+                                    snackbarHostState.showSnackbar("Producto creado correctamente")
+                                }
+                                navController.popBackStack()
+                            } catch (e: Exception) {
+                                snackbarHostState.showSnackbar("Error al guardar: ${e.message}")
                             }
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(if (id > 0) "Guardar cambios" else "Crear producto")
+                    Text(if (id > 0) "Guardar cambios" else "Crear")
                 }
 
-                Spacer(modifier = Modifier.padding(4.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                // Botón cancelar
                 Button(
                     onClick = { navController.popBackStack() },
                     modifier = Modifier.fillMaxWidth()
@@ -194,7 +179,6 @@ fun PantallaEditarProducto(navController: NavController, id: Int) {
             }
         }
 
-        // Snackbar host para mensajes
         SnackbarHost(hostState = snackbarHostState)
     }
 }
