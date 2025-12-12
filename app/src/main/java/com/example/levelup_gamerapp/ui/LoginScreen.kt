@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.levelup_gamerapp.viewmodel.SesionViewModel
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
 
 @Composable
 fun LoginScreen(
@@ -80,24 +81,26 @@ fun LoginScreen(
                         errorMsg = "Debes ingresar correo y contraseña"
                         return@Button
                     }
+
                     scope.launch {
                         cargando = true
                         errorMsg = null
-                        val ok = try {
+                        try {
                             sesionViewModel.login(correo.trim(), contrasena)
-                        } catch (e: Exception) {
-                            errorMsg = "Error conectando al servidor"
-                            false
-                        }
-                        cargando = false
-
-                        if (ok) {
                             navController.navigate("productos") {
                                 popUpTo("login") { inclusive = true }
                                 launchSingleTop = true
                             }
-                        } else if (errorMsg == null) {
-                            errorMsg = "Credenciales inválidas"
+                        } catch (e: HttpException) {
+                            // Backend sin ControllerAdvice: normalmente cae aquí con 4xx/5xx
+                            errorMsg = when (e.code()) {
+                                401, 403 -> "No autorizado"
+                                else -> "Credenciales incorrectas o error del servidor (${e.code()})"
+                            }
+                        } catch (e: Exception) {
+                            errorMsg = "Error conectando al servidor"
+                        } finally {
+                            cargando = false
                         }
                     }
                 },

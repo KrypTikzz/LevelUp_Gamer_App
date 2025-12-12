@@ -21,11 +21,9 @@ class RegistroUsuarioViewModel(private val repository: RegistroUsuarioRepository
         correo: String,
         contrasena: String,
         edad: Int,
-        foto: Bitmap? = null // 🆕 nuevo parámetro opcional
+        foto: Bitmap? = null
     ) {
         viewModelScope.launch {
-
-            // ---- VALIDACIONES ----
             if (nombre.isBlank() || apellido.isBlank() || correo.isBlank() || contrasena.isBlank()) {
                 _mensaje.value = "Completa todos los campos"
                 return@launch
@@ -49,8 +47,7 @@ class RegistroUsuarioViewModel(private val repository: RegistroUsuarioRepository
 
             val contrasenaSegura = Regex("^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{6,}$")
             if (!contrasenaSegura.matches(contrasena)) {
-                _mensaje.value =
-                    "La contraseña debe tener al menos 6 caracteres e incluir letras y números"
+                _mensaje.value = "La contraseña debe tener al menos 6 caracteres e incluir letras y números"
                 return@launch
             }
 
@@ -59,16 +56,9 @@ class RegistroUsuarioViewModel(private val repository: RegistroUsuarioRepository
                 return@launch
             }
 
-            val existente = repository.verificarCorreo(correo)
-            if (existente != null) {
-                _mensaje.value = "El correo ya está registrado"
-                return@launch
-            }
-
             val dominiosDescuento = listOf("@duocuc.cl")
             val descuento = if (dominiosDescuento.any { correo.endsWith(it, true) }) 20 else 0
 
-            // 🧠 Convierte la foto en bytes (si existe)
             val fotoBytes = foto?.let {
                 val stream = ByteArrayOutputStream()
                 it.compress(Bitmap.CompressFormat.PNG, 100, stream)
@@ -82,15 +72,18 @@ class RegistroUsuarioViewModel(private val repository: RegistroUsuarioRepository
                 contrasena = contrasena,
                 edad = edad,
                 descuentoAplicado = descuento,
-                fotoPerfil = fotoBytes // 🆕 guardamos los bytes
+                fotoPerfil = fotoBytes
             )
 
-            repository.registrarUsuario(usuario)
-
-            _mensaje.value = if (descuento > 0)
-                "Registro exitoso 🎉 Se aplicó un descuento del 20%"
-            else
-                "Registro exitoso ✅"
+            try {
+                repository.registrarUsuario(usuario)
+                _mensaje.value = if (descuento > 0)
+                    "Registro exitoso 🎉 Se aplicó un descuento del 20%"
+                else
+                    "Registro exitoso ✅"
+            } catch (e: Exception) {
+                _mensaje.value = "No se pudo registrar: ${e.message ?: "error"}"
+            }
         }
     }
 }
