@@ -2,7 +2,10 @@ package com.example.levelup_gamerapp.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
@@ -24,9 +27,39 @@ import com.example.levelup_gamerapp.repository.RemoteProductosRepository
 import com.example.levelup_gamerapp.viewmodel.CarritoViewModel
 import com.example.levelup_gamerapp.viewmodel.CarritoViewModelFactory
 
+// --------------------
+// MODELO COMENTARIO UI
+// --------------------
+data class ComentarioUI(
+    val usuario: String,
+    val comentario: String,
+    val rating: Int
+)
+
+// --------------------
+// COMPONENTE CARITAS (1 a 5)
+// --------------------
+@Composable
+fun RatingCaritas(
+    rating: Int,
+    onRatingChange: (Int) -> Unit
+) {
+    Row {
+        for (i in 1..5) {
+            Text(
+                text = if (i <= rating) "😄" else "🙂",
+                fontSize = 28.sp,
+                modifier = Modifier
+                    .padding(4.dp)
+                    .clickable { onRatingChange(i) }
+            )
+        }
+    }
+}
+
 /**
  * Pantalla de detalle de un producto.
- * Ahora carga 1 producto por ID desde el backend: GET /api/productos/{id}
+ * Incluye comentarios y calificación (mock frontend).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,16 +72,31 @@ fun PantallaProducto(
     // Carrito local (Room)
     val db = remember { AppDatabase.getDatabase(context) }
     val carritoRepo = remember { CarritoRepository(db.carritoDao()) }
-    val carritoViewModel: CarritoViewModel = viewModel(factory = CarritoViewModelFactory(carritoRepo))
+    val carritoViewModel: CarritoViewModel =
+        viewModel(factory = CarritoViewModelFactory(carritoRepo))
 
-    // Repositorio remoto de productos
+    // Repositorio remoto
     val productosRepo = remember { RemoteProductosRepository() }
 
     var producto by remember { mutableStateOf<ProductoDTO?>(null) }
     var cargando by remember { mutableStateOf(true) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
 
-    // Cargar producto por ID (no cargar toda la lista)
+    // --------------------
+    // ESTADOS COMENTARIOS
+    // --------------------
+    var nombreUsuario by remember { mutableStateOf("Usuario") }
+    var rating by remember { mutableStateOf(0) }
+    var comentarioTexto by remember { mutableStateOf("") }
+
+    val comentarios = remember {
+        mutableStateListOf(
+            ComentarioUI("Juan", "Muy buen producto", 5),
+            ComentarioUI("Ana", "Cumple su función", 3)
+        )
+    }
+
+    // Cargar producto
     LaunchedEffect(id) {
         cargando = true
         errorMsg = null
@@ -96,10 +144,7 @@ fun PantallaProducto(
                         .background(Color.Black),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = errorMsg ?: "Error desconocido",
-                        color = Color.White
-                    )
+                    Text(errorMsg ?: "Error desconocido", color = Color.White)
                 }
             }
 
@@ -123,6 +168,7 @@ fun PantallaProducto(
                         .fillMaxSize()
                         .padding(padding)
                         .background(Color.Black)
+                        .verticalScroll(rememberScrollState())
                         .padding(16.dp)
                 ) {
                     // Imagen
@@ -144,8 +190,6 @@ fun PantallaProducto(
                         fontWeight = FontWeight.Bold
                     )
 
-                    Spacer(modifier = Modifier.height(6.dp))
-
                     Text(
                         text = "$${p.precioProducto}",
                         color = Color.White,
@@ -153,20 +197,15 @@ fun PantallaProducto(
                         fontWeight = FontWeight.SemiBold
                     )
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                    Text(
-                        text = p.descripcionProducto,
-                        color = Color.White,
-                        fontSize = 14.sp
-                    )
+                    Text(p.descripcionProducto, color = Color.White)
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
                         text = "Stock disponible: ${p.cantidadDisponible}",
-                        color = Color(0xFF1E90FF),
-                        fontSize = 14.sp
+                        color = Color(0xFF1E90FF)
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -188,6 +227,90 @@ fun PantallaProducto(
                         )
                     ) {
                         Text(if (p.cantidadDisponible > 0) "Agregar al carrito" else "Sin stock")
+                    }
+
+                    // ======================
+                    // COMENTARIOS
+                    // ======================
+                    Spacer(modifier = Modifier.height(28.dp))
+
+                    Text(
+                        text = "Comentarios",
+                        color = Color(0xFF39FF14),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = nombreUsuario,
+                        onValueChange = { nombreUsuario = it },
+                        label = { Text("Nombre") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    RatingCaritas(
+                        rating = rating,
+                        onRatingChange = { rating = it }
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = comentarioTexto,
+                        onValueChange = { comentarioTexto = it },
+                        label = { Text("Escribe tu comentario") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Button(
+                        onClick = {
+                            if (comentarioTexto.isNotBlank() && rating > 0) {
+                                comentarios.add(
+                                    ComentarioUI(
+                                        usuario = nombreUsuario.ifBlank { "Usuario" },
+                                        comentario = comentarioTexto,
+                                        rating = rating
+                                    )
+                                )
+                                comentarioTexto = ""
+                                rating = 0
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF39FF14),
+                            contentColor = Color.Black
+                        )
+                    ) {
+                        Text("Publicar comentario")
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    comentarios.forEach { c ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text(
+                                    text = "${c.usuario}  ${"😄".repeat(c.rating)}",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(c.comentario, color = Color.White)
+                            }
+                        }
                     }
                 }
             }
