@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun PantallaEditarUsuario(
     navController: NavController,
-    id: Int
+    id: Long
 ) {
     val context = LocalContext.current
     val repo = remember { RemoteUsuariosRepository() }
@@ -40,7 +40,7 @@ fun PantallaEditarUsuario(
     // Cargar datos del usuario al entrar
     LaunchedEffect(id) {
         try {
-            val usuario = repo.obtenerUsuario(id.toLong())
+            val usuario = repo.obtenerUsuario(id)
             nombre = usuario.nombre
             apellido = usuario.apellido
             correo = usuario.correo
@@ -58,29 +58,16 @@ fun PantallaEditarUsuario(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        text = "Editar usuario",
-                        color = Color(0xFF39FF14),
-                        fontSize = 20.sp
-                    )
-                },
+                title = { Text("Editar usuario", color = Color.White) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.Filled.ArrowBack,
-                            contentDescription = "Volver",
-                            tint = Color(0xFF39FF14)
-                        )
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = Color.White)
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Black
-                )
+                }
             )
-        },
-        containerColor = Color.Black
+        }
     ) { padding ->
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -96,8 +83,8 @@ fun PantallaEditarUsuario(
                 }
                 errorMsg != null -> {
                     Text(
-                        text = errorMsg ?: "Error desconocido",
-                        color = Color.White,
+                        text = errorMsg!!,
+                        color = Color(0xFFFF5252),
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }
@@ -160,7 +147,7 @@ fun PantallaEditarUsuario(
                                     edadInt != null
                                 ) {
                                     val actualizado = UsuarioDTO(
-                                        id = id.toLong(),
+                                        id = id,
                                         nombre = nombre.trim(),
                                         apellido = apellido.trim(),
                                         correo = correo.trim(),
@@ -168,9 +155,10 @@ fun PantallaEditarUsuario(
                                         edad = edadInt,
                                         admin = esAdmin
                                     )
+
                                     scope.launch {
                                         try {
-                                            repo.actualizarUsuario(id.toLong(), actualizado)
+                                            repo.actualizarUsuario(id, actualizado)
                                             navController.popBackStack()
                                         } catch (e: Exception) {
                                             errorMsg = "Error al guardar cambios"
