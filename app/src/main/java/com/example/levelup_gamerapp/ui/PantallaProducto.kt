@@ -23,77 +23,58 @@ import com.example.levelup_gamerapp.repository.CarritoRepository
 import com.example.levelup_gamerapp.repository.RemoteProductosRepository
 import com.example.levelup_gamerapp.viewmodel.CarritoViewModel
 import com.example.levelup_gamerapp.viewmodel.CarritoViewModelFactory
-import kotlinx.coroutines.launch
 
 /**
  * Pantalla de detalle de un producto.
- * Esta versión obtiene los datos del producto desde el backend mediante
- * [RemoteProductosRepository] y mantiene el carrito de forma local.
- *
- * @param id Identificador del producto que se quiere mostrar.
- * @param onNavigateBack Acción a ejecutar al volver atrás.
+ * Ahora carga 1 producto por ID desde el backend: GET /api/productos/{id}
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaProducto(
-    id: Int,
+    id: Long,
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
-    // Repositorio y ViewModel del carrito (local)
-    val db = AppDatabase.obtenerBaseDatos(context)
-    val cRepo = remember { CarritoRepository(db.carritoDao()) }
-    val carritoVM: CarritoViewModel = viewModel(factory = CarritoViewModelFactory(cRepo))
 
-    // Repositorio remoto para productos
+    // Carrito local (Room)
+    val db = remember { AppDatabase.getDatabase(context) }
+    val carritoRepo = remember { CarritoRepository(db.carritoDao()) }
+    val carritoViewModel: CarritoViewModel = viewModel(factory = CarritoViewModelFactory(carritoRepo))
+
+    // Repositorio remoto de productos
     val productosRepo = remember { RemoteProductosRepository() }
-    var listaProductos by remember { mutableStateOf<List<ProductoDTO>>(emptyList()) }
+
+    var producto by remember { mutableStateOf<ProductoDTO?>(null) }
     var cargando by remember { mutableStateOf(true) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
-    val scope = rememberCoroutineScope()
 
-    // Cargar listado de productos desde el backend una sola vez
-    LaunchedEffect(Unit) {
+    // Cargar producto por ID (no cargar toda la lista)
+    LaunchedEffect(id) {
+        cargando = true
+        errorMsg = null
+        producto = null
         try {
-            listaProductos = productosRepo.obtenerProductos()
-            errorMsg = null
+            producto = productosRepo.obtenerProducto(id)
         } catch (e: Exception) {
-            errorMsg = e.localizedMessage
+            errorMsg = e.localizedMessage ?: "Error al cargar producto"
         } finally {
             cargando = false
         }
     }
 
-    // Buscar el producto concreto en la lista
-    val producto: ProductoDTO? = remember(listaProductos, id) {
-        listaProductos.firstOrNull { it.id?.toInt() == id }
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        text = "Detalle de producto",
-                        color = Color(0xFF39FF14),
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
+                title = { Text("Detalle de producto", color = Color.White) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.Filled.ArrowBack,
-                            contentDescription = "Volver",
-                            tint = Color(0xFF39FF14)
-                        )
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = Color.White)
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
+                }
             )
-        },
-        containerColor = Color.Black
+        }
     ) { padding ->
+
         when {
             cargando -> {
                 Box(
@@ -106,6 +87,7 @@ fun PantallaProducto(
                     CircularProgressIndicator(color = Color(0xFF39FF14))
                 }
             }
+
             errorMsg != null -> {
                 Box(
                     modifier = Modifier
@@ -120,6 +102,7 @@ fun PantallaProducto(
                     )
                 }
             }
+
             producto == null -> {
                 Box(
                     modifier = Modifier
@@ -131,80 +114,80 @@ fun PantallaProducto(
                     Text("Producto no encontrado", color = Color.White)
                 }
             }
+
             else -> {
-                val p = producto
+                val p = producto!!
+
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
                         .background(Color.Black)
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.Top
+                        .padding(16.dp)
                 ) {
-                    // Imagen del producto
+                    // Imagen
                     Image(
                         painter = rememberAsyncImagePainter(p.imagenUrl),
                         contentDescription = p.nombreProducto,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(220.dp),
+                            .height(260.dp),
                         contentScale = ContentScale.Crop
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    // Nombre
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
                     Text(
                         text = p.nombreProducto,
                         color = Color(0xFF39FF14),
-                        style = MaterialTheme.typography.headlineSmall,
+                        fontSize = 22.sp,
                         fontWeight = FontWeight.Bold
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    // Precio
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
                     Text(
-                        text = "Precio: $${"%.2f".format(p.precioProducto)}",
-                        color = Color(0xFF1E90FF),
-                        style = MaterialTheme.typography.titleMedium
+                        text = "$${p.precioProducto}",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    // 🔹 Stock disponible
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Text(
+                        text = p.descripcionProducto,
+                        color = Color.White,
+                        fontSize = 14.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
                     Text(
                         text = "Stock disponible: ${p.cantidadDisponible}",
-                        color = Color(0xFF39FF14),
-                        style = MaterialTheme.typography.bodyMedium
+                        color = Color(0xFF1E90FF),
+                        fontSize = 14.sp
                     )
+
                     Spacer(modifier = Modifier.height(16.dp))
-                    // Descripción
-                    Text(
-                        "Descripción",
-                        color = Color(0xFF39FF14),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        p.descripcionProducto,
-                        color = Color.White,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
-                    // Botón agregar al carrito
-                    Row(
+
+                    Button(
+                        onClick = {
+                            carritoViewModel.agregarProductoAlCarrito(
+                                idProducto = p.id ?: id,
+                                nombre = p.nombreProducto,
+                                precio = p.precioProducto,
+                                imagenUrl = p.imagenUrl
+                            )
+                        },
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically
+                        enabled = p.cantidadDisponible > 0,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF39FF14),
+                            contentColor = Color.Black
+                        )
                     ) {
-                        Button(
-                            onClick = {
-                                // Agregar al carrito usa el repositorio local
-                                carritoVM.agregarProductoAlCarrito(
-                                    idProducto = p.id ?: 0L,
-                                    nombre = p.nombreProducto,
-                                    precio = p.precioProducto,
-                                    imagenUrl = p.imagenUrl
-                                )
-                            }
-                        ) {
-                            Text("Agregar al carrito")
-                        }
+                        Text(if (p.cantidadDisponible > 0) "Agregar al carrito" else "Sin stock")
                     }
                 }
             }
