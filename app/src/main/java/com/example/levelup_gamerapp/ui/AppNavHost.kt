@@ -73,7 +73,7 @@ fun AppNavHost() {
                     title = {
                         Text(
                             text = "LevelUp Gamer",
-                            color = Color.White
+                            color = Color(0xFF39FF14)
                         )
                     },
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
