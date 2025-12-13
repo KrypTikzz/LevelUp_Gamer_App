@@ -13,15 +13,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.levelup_gamerapp.core.UserSession
 import com.example.levelup_gamerapp.remote.PedidoResponseDTO
 import com.example.levelup_gamerapp.repository.RemotePedidosRepository
+import com.example.levelup_gamerapp.utils.generarBoletaPdf
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaMisPedidos(onNavigateBack: () -> Unit) {
+
+    val context = LocalContext.current
     val repo = remember { RemotePedidosRepository() }
 
     val usuarioId = UserSession.idUsuario
@@ -119,6 +123,7 @@ fun PantallaMisPedidos(onNavigateBack: () -> Unit) {
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
+
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically
@@ -176,6 +181,24 @@ fun PantallaMisPedidos(onNavigateBack: () -> Unit) {
                                             )
                                         }
                                         Spacer(modifier = Modifier.height(4.dp))
+                                    }
+
+                                    Spacer(modifier = Modifier.height(12.dp))
+
+                                    Button(
+                                        onClick = {
+                                            generarBoletaPdf(
+                                                context = context,
+                                                pedido = pedido
+                                            )
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(0xFF39FF14),
+                                            contentColor = Color.Black
+                                        )
+                                    ) {
+                                        Text("Descargar boleta PDF")
                                     }
                                 }
                             }
