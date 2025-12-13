@@ -113,12 +113,15 @@ private fun AppNavGraph(
         composable("login") {
             LoginScreen(navController = navController, sesionViewModel = sesionViewModel)
         }
+
         composable("registro") {
             RegistroUsuarioScreen(navController = navController)
         }
+
         composable("inicio") {
             PantallaPrincipal(navController)
         }
+
         composable("productos") {
             PantallaProductos(navController)
         }
@@ -138,7 +141,22 @@ private fun AppNavGraph(
 
         composable("novedades") { PantallaNovedades() }
         composable("contacto") { PantallaContacto() }
-        composable("carrito") { PantallaCarrito() }
+
+        // ✅ Carrito ahora recibe navController (para navegar a checkout)
+        composable("carrito") { PantallaCarrito(navController) }
+
+        // ✅ NUEVO: Checkout
+        composable("checkout") { PantallaCheckout(navController) }
+
+        // ✅ NUEVO: Compra exitosa
+        composable("compra_exitosa?total={total}&orderId={orderId}") { backStackEntry ->
+            val total = backStackEntry.arguments?.getString("total")
+            val orderId = backStackEntry.arguments?.getString("orderId")
+            PantallaCompraExitosa(navController, total, orderId)
+        }
+
+        // ✅ NUEVO: Compra fallida
+        composable("compra_fallida") { PantallaCompraFallida(navController) }
 
         // ✅ Historial compras (cliente)
         composable("mis_pedidos") {
