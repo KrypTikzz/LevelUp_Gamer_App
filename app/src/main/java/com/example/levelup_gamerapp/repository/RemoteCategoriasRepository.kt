@@ -2,6 +2,8 @@ package com.example.levelup_gamerapp.repository
 
 import com.example.levelup_gamerapp.remote.ApiClient
 import com.example.levelup_gamerapp.remote.CategoriaDTO
+import com.example.levelup_gamerapp.utils.ErrorUtils
+import retrofit2.HttpException
 
 /**
  * repositorio que se comunica con el backend para gestionar categorías.
@@ -10,14 +12,17 @@ import com.example.levelup_gamerapp.remote.CategoriaDTO
  */
 open class RemoteCategoriasRepository {
 
-    // api general del backend (no auth)
     private val api = ApiClient.levelUpApi
 
     /**
      * obtiene todas las categorías disponibles en el servidor.
      */
     open suspend fun obtenerCategorias(): List<CategoriaDTO> {
-        return api.obtenerCategorias()
+        return try {
+            api.obtenerCategorias()
+        } catch (e: HttpException) {
+            throw Exception(ErrorUtils.traducirCodigoHTTP(e.code(), "Categorías"))
+        }
     }
 
     /**
@@ -27,9 +32,9 @@ open class RemoteCategoriasRepository {
         val response = api.crearCategoria(categoria)
         if (response.isSuccessful) {
             return response.body()
-                ?: throw Exception("respuesta sin cuerpo al crear categoría")
+                ?: throw Exception("Respuesta inválida del servidor (categoría sin cuerpo).")
         } else {
-            throw Exception("error al crear categoría: código ${response.code()}")
+            throw Exception(ErrorUtils.traducirCodigoHTTP(response.code(), "Categoría"))
         }
     }
 
@@ -40,9 +45,9 @@ open class RemoteCategoriasRepository {
         val response = api.actualizarCategoria(id, categoria)
         if (response.isSuccessful) {
             return response.body()
-                ?: throw Exception("respuesta sin cuerpo al actualizar categoría")
+                ?: throw Exception("Respuesta inválida del servidor (categoría sin cuerpo).")
         } else {
-            throw Exception("error al actualizar categoría: código ${response.code()}")
+            throw Exception(ErrorUtils.traducirCodigoHTTP(response.code(), "Categoría"))
         }
     }
 
@@ -52,7 +57,7 @@ open class RemoteCategoriasRepository {
     open suspend fun eliminarCategoria(id: Long) {
         val response = api.eliminarCategoria(id)
         if (!response.isSuccessful) {
-            throw Exception("error al eliminar categoría: código ${response.code()}")
+            throw Exception(ErrorUtils.traducirCodigoHTTP(response.code(), "Categoría"))
         }
     }
 }

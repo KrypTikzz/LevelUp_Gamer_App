@@ -2,6 +2,8 @@ package com.example.levelup_gamerapp.repository
 
 import com.example.levelup_gamerapp.remote.ApiClient
 import com.example.levelup_gamerapp.remote.ProductoDTO
+import com.example.levelup_gamerapp.utils.ErrorUtils
+import retrofit2.HttpException
 import retrofit2.Response
 
 /**
@@ -11,21 +13,28 @@ import retrofit2.Response
  */
 open class RemoteProductosRepository {
 
-    // api general del backend (productos, categorías, usuarios, etc.)
     private val api = ApiClient.levelUpApi
 
     /**
      * obtiene el listado completo de productos desde el servidor.
      */
     open suspend fun obtenerProductos(): List<ProductoDTO> {
-        return api.obtenerProductos()
+        return try {
+            api.obtenerProductos()
+        } catch (e: HttpException) {
+            throw Exception(ErrorUtils.traducirCodigoHTTP(e.code(), "Productos"))
+        }
     }
 
     /**
      * obtiene un producto concreto por su identificador.
      */
     open suspend fun obtenerProducto(id: Long): ProductoDTO {
-        return api.obtenerProducto(id)
+        return try {
+            api.obtenerProducto(id)
+        } catch (e: HttpException) {
+            throw Exception(ErrorUtils.traducirCodigoHTTP(e.code(), "Producto"))
+        }
     }
 
     /**
@@ -35,9 +44,9 @@ open class RemoteProductosRepository {
         val response: Response<ProductoDTO> = api.crearProducto(producto)
         if (response.isSuccessful) {
             return response.body()
-                ?: throw Exception("respuesta sin cuerpo al crear producto")
+                ?: throw Exception("Respuesta inválida del servidor (producto sin cuerpo).")
         } else {
-            throw Exception("error al crear producto: código ${response.code()}")
+            throw Exception(ErrorUtils.traducirCodigoHTTP(response.code(), "Producto"))
         }
     }
 
@@ -48,9 +57,9 @@ open class RemoteProductosRepository {
         val response: Response<ProductoDTO> = api.actualizarProducto(id, producto)
         if (response.isSuccessful) {
             return response.body()
-                ?: throw Exception("respuesta sin cuerpo al actualizar producto")
+                ?: throw Exception("Respuesta inválida del servidor (producto sin cuerpo).")
         } else {
-            throw Exception("error al actualizar producto: código ${response.code()}")
+            throw Exception(ErrorUtils.traducirCodigoHTTP(response.code(), "Producto"))
         }
     }
 
@@ -60,7 +69,7 @@ open class RemoteProductosRepository {
     open suspend fun eliminarProducto(id: Long) {
         val response: Response<Unit> = api.eliminarProducto(id)
         if (!response.isSuccessful) {
-            throw Exception("error al eliminar producto: código ${response.code()}")
+            throw Exception(ErrorUtils.traducirCodigoHTTP(response.code(), "Producto"))
         }
     }
 }

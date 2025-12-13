@@ -2,8 +2,9 @@ package com.example.levelup_gamerapp.repository
 
 import com.example.levelup_gamerapp.remote.ApiClient
 import com.example.levelup_gamerapp.remote.UsuarioDTO
-import retrofit2.Response
+import com.example.levelup_gamerapp.utils.ErrorUtils
 import retrofit2.HttpException
+import retrofit2.Response
 
 /**
  * repositorio remoto para la gestión de usuarios.
@@ -12,17 +13,24 @@ import retrofit2.HttpException
  */
 open class RemoteUsuariosRepository {
 
-    // api general del backend (usuarios, productos, etc.)
     private val api = ApiClient.levelUpApi
 
     /** obtiene todos los usuarios almacenados en el backend. */
     open suspend fun obtenerUsuarios(): List<UsuarioDTO> {
-        return api.obtenerUsuarios()
+        return try {
+            api.obtenerUsuarios()
+        } catch (e: HttpException) {
+            throw Exception(ErrorUtils.traducirCodigoHTTP(e.code(), "Usuarios"))
+        }
     }
 
     /** obtiene un usuario por su identificador. */
     open suspend fun obtenerUsuario(id: Long): UsuarioDTO {
-        return api.obtenerUsuario(id)
+        return try {
+            api.obtenerUsuario(id)
+        } catch (e: HttpException) {
+            throw Exception(ErrorUtils.traducirCodigoHTTP(e.code(), "Usuario"))
+        }
     }
 
     /** crea un nuevo usuario. devuelve el usuario resultante. */
@@ -30,9 +38,9 @@ open class RemoteUsuariosRepository {
         val response: Response<UsuarioDTO> = api.crearUsuario(usuario)
         if (response.isSuccessful) {
             return response.body()
-                ?: throw Exception("respuesta sin cuerpo al crear usuario")
+                ?: throw Exception("Respuesta inválida del servidor (usuario sin cuerpo).")
         } else {
-            throw Exception("error al crear usuario: código ${response.code()}")
+            throw Exception(ErrorUtils.traducirCodigoHTTP(response.code(), "Usuario"))
         }
     }
 
@@ -41,9 +49,9 @@ open class RemoteUsuariosRepository {
         val response: Response<UsuarioDTO> = api.actualizarUsuario(id, usuario)
         if (response.isSuccessful) {
             return response.body()
-                ?: throw Exception("respuesta sin cuerpo al actualizar usuario")
+                ?: throw Exception("Respuesta inválida del servidor (usuario sin cuerpo).")
         } else {
-            throw Exception("error al actualizar usuario: código ${response.code()}")
+            throw Exception(ErrorUtils.traducirCodigoHTTP(response.code(), "Usuario"))
         }
     }
 
@@ -51,7 +59,7 @@ open class RemoteUsuariosRepository {
     open suspend fun eliminarUsuario(id: Long) {
         val response: Response<Unit> = api.eliminarUsuario(id)
         if (!response.isSuccessful) {
-            throw Exception("error al eliminar usuario: código ${response.code()}")
+            throw Exception(ErrorUtils.traducirCodigoHTTP(response.code(), "Usuario"))
         }
     }
 
@@ -60,7 +68,11 @@ open class RemoteUsuariosRepository {
         return try {
             api.buscarUsuarioPorCorreo(correo)
         } catch (e: HttpException) {
-            if (e.code() == 404) null else throw e
+            if (e.code() == 404) {
+                null
+            } else {
+                throw Exception(ErrorUtils.traducirCodigoHTTP(e.code(), "Usuario"))
+            }
         }
     }
 

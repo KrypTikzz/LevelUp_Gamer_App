@@ -13,6 +13,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.example.levelup_gamerapp.utils.ErrorUtils
 import com.example.levelup_gamerapp.viewmodel.SesionViewModel
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
@@ -92,13 +93,14 @@ fun LoginScreen(
                                 launchSingleTop = true
                             }
                         } catch (e: HttpException) {
-                            // Backend sin ControllerAdvice: normalmente cae aquí con 4xx/5xx
                             errorMsg = when (e.code()) {
-                                401, 403 -> "No autorizado"
-                                else -> "Credenciales incorrectas o error del servidor (${e.code()})"
+                                401, 403 -> "Correo o contraseña incorrectos"
+                                404 -> "Usuario no encontrado"
+                                else -> ErrorUtils.traducirCodigoHTTP(e.code())
                             }
                         } catch (e: Exception) {
-                            errorMsg = "Error conectando al servidor"
+                            // Aquí caen errores de red, timeout, DNS, etc.
+                            errorMsg = "No se pudo contactar al servidor. Revisa tu conexión."
                         } finally {
                             cargando = false
                         }
