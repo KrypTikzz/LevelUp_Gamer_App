@@ -1,10 +1,9 @@
 package com.example.levelup_gamerapp.ui
 
-import android.Manifest
-import android.content.pm.PackageManager
+// Ya no solicitamos permisos de almacenamiento amplios para acceder a la galería.
 import android.graphics.Bitmap
 import android.net.Uri
-import android.os.Build
+// La clase Build no se utiliza directamente después de eliminar la lógica de permisos
 import android.util.Size
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -26,7 +25,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
+// ContextCompat ya no es necesario después de eliminar las comprobaciones de permisos
 import com.example.levelup_gamerapp.viewmodel.RegistroUsuarioViewModel
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -68,22 +67,23 @@ fun FormScreen(
             foto = thumb
         }
     }
-    val requestGalleryPermission = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) galleryLauncher.launch("image/*")
-    }
-    fun abrirGaleriaConPermiso() {
-        val permiso = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
-            Manifest.permission.READ_MEDIA_IMAGES
-        else
-            Manifest.permission.READ_EXTERNAL_STORAGE
-        if (ContextCompat.checkSelfPermission(context, permiso) == PackageManager.PERMISSION_GRANTED) {
-            galleryLauncher.launch("image/*")
-        } else {
-            requestGalleryPermission.launch(permiso)
-        }
-    }
+    /*
+     * En la implementación anterior se intentaba solicitar permisos de almacenamiento
+     * amplios antes de lanzar el selector de galería del sistema. Sin embargo,
+     * el contrato `GetContent` no requiere los permisos `READ_EXTERNAL_STORAGE`
+     * ni `READ_MEDIA_IMAGES`. Cuando el usuario selecciona un elemento a través
+     * de este selector, el sistema concede acceso temporal al URI seleccionado.
+     * Solicitar un permiso de almacenamiento sin declararlo en el manifiesto
+     * provoca que la solicitud falle silenciosamente y que la galería nunca se abra.
+     *
+     * Para solucionar el problema de que el botón de galería no hacía nada,
+     * eliminamos la lógica innecesaria de permisos y lanzamos directamente el
+     * selector mediante `GetContent`. Este enfoque funciona en todos los niveles
+     * de API soportados y respeta el modelo de almacenamiento restringido de
+     * Android. Si necesitas un control más fino (por ejemplo, usar el nuevo
+     * photo picker en Android 13+), puedes considerar el contrato
+     * `ActivityResultContracts.PickVisualMedia`.
+     */
 
     // Ejecuta onSaved solo cuando el mensaje reporta éxito
     LaunchedEffect(mensaje) {
@@ -151,7 +151,8 @@ fun FormScreen(
                     Text("Tomar foto", color = Color.Black)
                 }
                 Button(
-                    onClick = { abrirGaleriaConPermiso() },
+                    // Lanza el selector de galería directamente sin solicitar permisos extra.
+                    onClick = { galleryLauncher.launch("image/*") },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                 ) {
                     Text("Subir desde galería", color = Color.Black)
