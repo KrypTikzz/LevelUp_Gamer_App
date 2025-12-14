@@ -7,12 +7,6 @@ import androidx.room.RoomDatabase
 
 /**
  * Implementación de la base de datos de Room para la aplicación.
- *
- * Se incluye la entidad [ProductosEntity] con un nuevo campo `remoteId`. Para
- * reflejar este cambio en el esquema se incrementa la versión a 4 y se
- * aplica una migración destructiva mediante `fallbackToDestructiveMigration()`.
- * Si en un entorno real se desea preservar la información, se debería
- * implementar una migración adecuada.
  */
 @Database(
     entities = [
@@ -31,17 +25,11 @@ abstract class AppDatabase : RoomDatabase() {
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null
-
-        /**
-         * Obtiene una instancia singleton de la base de datos. Este método se
-         * mantiene para compatibilidad con versiones anteriores del código. Internamente
-         * delega a [getDatabase].
-         */
         fun obtenerBaseDatos(context: Context): AppDatabase = getDatabase(context)
 
         /**
-         * Devuelve la instancia única de [AppDatabase]. Si ya existe, la retorna,
-         * de lo contrario la crea utilizando [Room.databaseBuilder]. Se utiliza
+         * Devuelve la instancia única de AppDatabase. Si ya existe, la retorna,
+         * de lo contrario la crea utilizando Room.databaseBuilder. Se utiliza
          * el mismo nombre de base de datos en toda la aplicación para evitar
          * inconsistencias.
          */

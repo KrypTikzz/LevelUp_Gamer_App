@@ -4,11 +4,11 @@ import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 
 /**
- * Data Access Object (DAO) para la entidad [ProductosEntity].
+ * Data Access Object (DAO) para la entidad ProductosEntity.
  *
  * Proporciona métodos para obtener, insertar, actualizar y eliminar productos
  * en la base de datos local. Además añade la capacidad de buscar por el
- * identificador remoto ([ProductosEntity.remoteId]) para sincronizar con el
+ * identificador remoto ProductosEntity.remoteId para sincronizar con el
  * backend. De este modo, cuando el usuario realiza una compra la app puede
  * localizar el producto correcto y descontar el stock aunque el ID local
  * difiera del ID remoto.
@@ -16,8 +16,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ProductosDao {
     /**
-     * Devuelve la lista completa de productos almacenados. Operación de
-     * suspensión (bloqueante).
+     * Devuelve la lista completa de productos almacenados. .
      */
     @Query("SELECT * FROM productos")
     suspend fun obtenerTodos(): List<ProductosEntity>
@@ -58,9 +57,7 @@ interface ProductosDao {
 
     /**
      * Obtiene un producto por su identificador remoto. Devuelve null si no
-     * existe ningún producto con ese remoteId. Este método es útil cuando
-     * queremos reflejar en la base local el stock de un producto que se
-     * identifica mediante un ID remoto proveniente del backend.
+     * existe ningún producto con ese remoteId.
      */
     @Query("SELECT * FROM productos WHERE remoteId = :remoteId LIMIT 1")
     suspend fun obtenerProductoPorRemoteId(remoteId: Long): ProductosEntity?

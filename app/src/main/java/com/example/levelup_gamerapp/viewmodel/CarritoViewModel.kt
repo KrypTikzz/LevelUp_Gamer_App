@@ -9,8 +9,8 @@ import kotlinx.coroutines.launch
 /**
  * ViewModel que gestiona las operaciones relacionadas con el carrito de compras.
  *
- * Se ha modificado el métoodo [agregarProductoAlCarrito] para incluir el
- * parámetro [idProducto], que corresponde al identificador real del producto.
+ * Se ha modificado el métoodo agregarProductoAlCarrito para incluir el
+ * parámetro idProducto, que corresponde al identificador real del producto.
  */
 class CarritoViewModel(private val repository: CarritoRepository) : ViewModel() {
 

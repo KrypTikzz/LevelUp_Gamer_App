@@ -4,12 +4,7 @@ import retrofit2.Response
 import retrofit2.http.*
 
 /**
- * Declaración de todas las rutas que expone el backend de LevelUp Gamer.
- * Esta interfaz es utilizada por Retrofit para generar automáticamente las
- * implementaciones que realizan las peticiones HTTP.
- *
- * Se han añadido las operaciones de productos, categorías y usuarios para
- * completar la migración a un backend 100 % remoto.
+ * Declaración de todas las rutas que expone el backend
  */
 interface LevelUpApi {
 

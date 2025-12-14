@@ -7,9 +7,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 /**
- * configura el cliente de retrofit para acceder al backend de levelup gamer.
- * incorpora un interceptor para enviar el token jwt automáticamente
- * en cada request autenticada.
+ * configura el cliente de retrofit para acceder al backend
  */
 object ApiClient {
 

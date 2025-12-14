@@ -5,8 +5,8 @@ import androidx.room.PrimaryKey
 
 /**
  * Representa un producto almacenado en la base de datos local.  Además del
- * identificador interno [id] que genera Room automáticamente, se añade el
- * campo [remoteId] para guardar el identificador real del producto en el
+ * identificador interno id que genera Room automáticamente, se añade el
+ * campo remoteId para guardar el identificador real del producto en el
  * backend. Cuando se envían pedidos al servidor este campo se utiliza para
  * asociar cada ítem con el producto correcto.
  */

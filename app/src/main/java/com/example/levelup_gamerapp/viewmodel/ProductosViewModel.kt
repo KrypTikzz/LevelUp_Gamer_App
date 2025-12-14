@@ -10,11 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * ViewModel dedicado a la gestión de productos a través del backend. A diferencia
- * de la versión que interactuaba con Room, esta implementación utiliza un
- * repositorio remoto para obtener, crear y eliminar productos. Los datos se
- * exponen mediante un [StateFlow] para que la UI pueda reaccionar a los
- * cambios cuando se realizan operaciones de red.
+ * ViewModel dedicado a la gestión de productos a través del backend.
  */
 class ProductosViewModel(private val repository: RemoteProductosRepository) : ViewModel() {
 

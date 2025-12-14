@@ -5,7 +5,7 @@ import androidx.room.PrimaryKey
 
 /**
  * Entidad que representa un ítem del carrito.  A diferencia de la versión
- * original, se incluye el campo [idProducto] que almacena el identificador
+ * original, se incluye el campo idProducto que almacena el identificador
  * real del producto.  Esto permite asociar cada ítem con el producto
  * correspondiente en la base de datos remota y enviar correctamente la
  * compra al backend.
