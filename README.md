@@ -2,6 +2,7 @@ LevelUp Gamer es una aplicación móvil desarrollada en Kotlin con Jetpack Compo
 Permite gestionar usuarios, productos, carrito de compras, boletas y opiniones, diferenciando funcionalidades según el rol del usuario.
 
 Tecnologías Utilizadas
+
 Frontend
 
  Kotlin
