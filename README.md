@@ -1,69 +1,66 @@
-# Level-Up Gamer App
+LevelUp Gamer es una aplicación móvil desarrollada en Kotlin con Jetpack Compose, conectada a un backend en Spring Boot, orientada a la venta de productos gamer.
+Permite gestionar usuarios, productos, carrito de compras, boletas y opiniones, diferenciando funcionalidades según el rol del usuario.
 
-## 1. Nombre del proyecto
-**Level-Up Gamer App** 
+Tecnologías Utilizadas
+Frontend
 
-## 2. Integrantes
-- Rodrigo Rojas  
-- Luciano Machuca
+ Kotlin
+ Jetpack Compose
+ Arquitectura MVVM
+ Retrofit
+ Coroutines
+ Room
+ DataStore
 
-## 3. Funcionalidades
-- Registro e inicio de sesión de usuarios con validaciones (correo, contraseña, edad).
-- Descuento especial para correos `@duocuc.cl`.
-- Creacion de cuenta admin con el correo `admin@levelup.cl`.
-- Listado y detalle de productos (nombre, descripción, precio, imagen, categoría).
-- Carrito de compras: agregar, eliminar y vaciar productos.
-- Administración básica de productos y usuarios (crear / editar / eliminar) para rol administrador.
+Backend
+ Spring Boot
+ Spring Security + JWT
+ PostgreSQL
+ JPA / Hibernate
+ Swagger (OpenAPI)
+ AWS (RDS)
 
-## 3. Endpoints
-Endpoints de productos
+Otros
+ GitHub
+ APK firmado + archivo
 
-| Ruta                                     | Método     | Descripción                                                                   |
-| ---------------------------------------- | ---------- | ----------------------------------------------------------------------------- |
-| `/api/productos`                         | **GET**    | Devuelve todos los productos disponibles.                                     |
-| `/api/productos/{id}`                    | **GET**    | Devuelve un producto por su ID.                                               |
-| `/api/productos/categoria/{categoriaId}` | **GET**    | Devuelve los productos de una categoría específica.                           |
-| `/api/productos`                         | **POST**   | Crea un nuevo producto con los datos enviados en el cuerpo de la petición.    |
-| `/api/productos/{id}`                    | **PUT**    | Actualiza un producto existente (ID) con los datos del cuerpo de la petición. |
-| `/api/productos/{id}`                    | **DELETE** | Elimina un producto por su ID.                                                |
+Instalación
 
-Endpoints de categorías
+Android
+Clonar repositorio
+Abrir en Android Studio
+Sincronizar Gradle
+Ejecutar en emulador o dispositivo
+APK firmado y .jks incluidos en el repositorio
 
-| Ruta                   | Método     | Descripción                                               |
-| ---------------------- | ---------- | --------------------------------------------------------- |
-| `/api/categorias`      | **GET**    | Obtiene la lista completa de categorías.                  |
-| `/api/categorias/{id}` | **GET**    | Devuelve los detalles de una categoría por ID.            |
-| `/api/categorias`      | **POST**   | Crea una nueva categoría.                                 |
-| `/api/categorias/{id}` | **PUT**    | Actualiza una categoría existente (nombre y descripción). |
-| `/api/categorias/{id}` | **DELETE** | Elimina una categoría por ID.                             |
+Backend
+Clonar repositorio
+Abrir en IntelliJ IDEA
+Configurar application.properties
+Ejecutar Spring Boot
 
+Funcionalidades
 
-Endpoints de usuarios
+Registro e inicio de sesión con JWT
+Listado y detalle de productos
+Opiniones por producto
+Carrito de compras con persistencia local
+Checkout y generación de boletas
+Historial de compras
+Gestión de productos, categorías y noticias (admin)
 
-| Ruta                              | Método     | Descripción                                                                     |
-| --------------------------------- | ---------- | ------------------------------------------------------------------------------- |
-| `/api/usuarios`                   | **GET**    | Devuelve la lista de todos los usuarios.                                        |
-| `/api/usuarios/{id}`              | **GET**    | Devuelve un usuario por su ID.                                                  |
-| `/api/usuarios`                   | **POST**   | Crea un nuevo usuario (requiere los datos de usuario en el cuerpo).             |
-| `/api/usuarios/{id}`              | **PUT**    | Actualiza un usuario existente.                                                 |
-| `/api/usuarios/{id}`              | **DELETE** | Elimina un usuario por su ID.                                                   |
-| `/api/usuarios/buscar?correo=...` | **GET**    | Busca un usuario por su correo electrónico.                                     |
-| `/api/usuarios/login`             | **POST**   | Inicia sesión; recibe el correo y la contraseña como parámetros de la petición. |
+Endpoints Principales
 
-## 5. Pasos para ejecutar
+Auth: /api/v1/auth/login, /api/v1/auth/registro
 
-1. **Levantar backend**  
-   - Ejecutar el proyecto backend .  
+Productos: /api/v1/productos
 
-2. **Ejecutar la app Android**  
-   - Abrir este proyecto en Android Studio.  
-   - Sincronizar Gradle.  
-   - Ejecutar en emulador
+Opiniones: /api/v1/productos/{idProducto}/opiniones
 
-## 6. Captura apk firmada + key
+Categorías: /api/v1/categorias
 
-<img width="260" height="121" alt="image" src="https://github.com/user-attachments/assets/c3b970f3-c676-41a7-9882-bc47d1911d16" />
+Noticias: /api/v1/noticias
 
-
+Boletas: /api/v1/boletas
 
 
